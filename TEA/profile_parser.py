@@ -108,7 +108,7 @@ class Parser():
             b = temp_l[-1].replace("\n", "")
             if "e" in b:
                 c = b.split("e")
-                val = float(c[0])*(10**int(c[1]))
+                val = float(c[0])*(10**float(c[1]))
             else:
                 try:
                     val = float(b)
@@ -167,7 +167,8 @@ class Parser():
                     t_l.append(t[e])
             if rank in t_l:
                 val = self._turn_into_number(t_l)
-                tax_id_holder[int(t_l[0])] = val
+                if "." not in t_l[0]:
+                    tax_id_holder[int(t_l[0])] = val
     
         return tax_id_holder
 
@@ -202,7 +203,8 @@ class Parser():
                 t_l = re.split("\t| +", line)
                 for rank in ranks:
                     if rank in t_l:
-                        rank_tax_ids[int(t_l[0])] = [rank, t_l[3]]
+                        if "." not in t_l[0]:
+                            rank_tax_ids[int(t_l[0])] = [rank, t_l[3]]
             
         return rank_tax_ids
 
