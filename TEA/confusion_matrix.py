@@ -9,7 +9,7 @@ Created on Thu Aug 13 15:26:55 2020
 
 import numpy as np
 import pandas as pd
-import MoC.comparator as comp
+import TEA.comparator as comp
 
 '''
  matrix -> Tax_ID: [ TP | FN | FP | TN]
