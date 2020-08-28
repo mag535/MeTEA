@@ -10,7 +10,7 @@ Calculating precision and recall
 #%% VARIABLES 7 IMPORTS
 
 import pandas as pd
-import MoC.confusion_matrix as cm
+import TEA.confusion_matrix as cm
 from glob import glob
 from openpyxl import load_workbook
 from openpyxl.styles import Font, Alignment
