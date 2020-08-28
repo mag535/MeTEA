@@ -331,14 +331,18 @@ class Misc():
     
     
     def main(self, gnd_truth, excel_name="TaxaPerformanceMetrics_byTool", gen_dir="", file_path="", csv="no"):
-        gen_paths = glob(gen_dir + "*.profile")
+        gen_paths = glob(os.path.join(gen_dir, "*.profile"))
+        print(gen_paths)
         self.input_path = gen_dir
         
         Juice = cm.Confusion(os.path.join(self.input_path, gnd_truth), "")
         self.set_truth(gnd_truth)
         
         for path in gen_paths:
+            print("...")
             name = os.path.basename(path)
+            print("Name:", name)
+            print("Type:", type(name))
             if name != gnd_truth:
                 Juice.set_file_name(path)
                 self.add_matrix(name, Juice.main("no"))
