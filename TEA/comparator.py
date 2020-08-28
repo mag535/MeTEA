@@ -7,7 +7,7 @@ Created on Tue Aug 11 09:38:24 2020
 
 #%% VARIABLES & IMPORTS
 
-import MoC.profile_parser as pp
+import TEA.profile_parser as pp
 
 # samples [sample #] [rank] [taxid] --->> Abundance
 '''
