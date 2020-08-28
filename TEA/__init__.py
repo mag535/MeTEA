@@ -5,7 +5,7 @@ Created on Mon Aug 17 16:58:22 2020
 @author: Melissa Gray
 """
 
-from MoC.profile_parser import Parser
-from MoC.comparator import Comparator
-from MoC.confusion_matrix import Confusion
-from MoC.precall import Misc
+from TEA.profile_parser import Parser
+from TEA.comparator import Comparator
+from TEA.confusion_matrix import Confusion
+from TEA.precall import Misc
