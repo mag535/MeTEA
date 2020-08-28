@@ -343,7 +343,7 @@ class Misc():
         
         for path in gen_paths:
             name = os.path.basename(path)
-            if name != gnd_truth:
+            if (name != gnd_truth) and (name not in self.matrix_dict):
                 Juice.set_file_name(path)
                 self.add_matrix(name, Juice.main("no"))
             
