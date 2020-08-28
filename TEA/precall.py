@@ -307,10 +307,14 @@ class Misc():
         workbook = load_workbook(path)
         for name in workbook.sheetnames:
             sheet = workbook[name]
-            cell = sheet.cell(1,1)
-            cell.value = "Tax ID"
-            cell.font = Font(bold=True)
-            cell.alignment = Alignment(horizontal='center', vertical='center')
+            c = sheet["A1"]
+            c.value = "Tax ID"
+            c.font = Font(bold=True)
+            c.alignment = Alignment(horizontal='center', vertical='center')
+            #cell = sheet.cell(1,1)
+            #cell.value = "Tax ID"
+            #cell.font = Font(bold=True)
+            #cell.alignment = Alignment(horizontal='center', vertical='center')
         workbook.save(path)
         return
     def save_as_excel(self, file_path, file_name):
