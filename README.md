@@ -13,4 +13,4 @@ The main function takes in five arguments, three of which are optional:
 	- (optional) "yes" if you want individual .csv files of each tool's confusion matrix; <Default: "no">
 
 
-You can find a quick start example and more details on the package in the jupyter note book 'PAckage Manual 2.0'.
+You can find a quick start example and more details on the package in the jupyter note book 'Package Manual 2.0'.
