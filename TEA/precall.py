@@ -14,6 +14,7 @@ import TEA.confusion_matrix as cm
 from glob import glob
 from openpyxl import load_workbook
 from openpyxl.styles import Font, Alignment
+import os.path
 
 
 #%% CLASS
@@ -120,14 +121,14 @@ class Misc():
         return
     
     def create_table(self, name=""):
-        Juice = cm.Confusion(self.input_path + self.cm_truth, "")
+        Juice = cm.Confusion(os.path.join(self.input_path, self.cm_truth), "")
         if name == "":
             for name in self.matrix_dict:
                 if name not in self.matrix_tables:
-                    Juice.set_file_name(self.input_path + name)
+                    Juice.set_file_name(os.path.join(self.input_path, name))
                     self.matrix_tables[name] = Juice.create_matrix_table(Juice.reformat_matrix(Juice.add_other_info(self.matrix_dict[name])))
         elif name in self.matrix_dict:
-            Juice.set_file_name(self.input_path + name)
+            Juice.set_file_name(os.path.join(self.input_path, name))
             self.matrix_tables[name] = Juice.create_matrix_table(Juice.reformat_matrix(Juice.add_other_info(self.matrix_dict[name])))
         else:
             print("There is no matrix by the name \'{}\'".format(name))
@@ -148,18 +149,18 @@ class Misc():
         return
     
     def save_matrices_as_csv(self, file_path):
-        Juice = cm.Confusion(self.input_path + self.cm_truth, "")
+        Juice = cm.Confusion(os.path.join(self.input_path, self.cm_truth), "")
         for name in self.matrix_dict:
             if self.saved[name] == False:
-                Juice.set_file_name(self.input_path + name)
+                Juice.set_file_name(os.path.join(self.input_path, name))
                 self.create_table(name)
-                csv_name = file_path + self.cm_truth + " " + name
+                csv_name = os.path.join(file_path, self.cm_truth + " " + name)
                 Juice.save_matrix_table(self.matrix_tables[name], csv_name)
         return
     
     def _get_name_and_rank(self):
         Chai = cm.comp.pp.Parser()
-        truth_other = Chai.main(self.input_path + self.cm_truth, 1)
+        truth_other = Chai.main(os.path.join(self.input_path, self.cm_truth), 1)
         tp = {}
         fn = {}
         fp = {}
@@ -187,7 +188,7 @@ class Misc():
         
         if len(skipped_tax_id) > 0:
             for name in self.matrix_dict:
-                temp_other = Chai.main(self.input_path + name, 1)
+                temp_other = Chai.main(os.path.join(self.input_path, name), 1)
                 for sample_num in temp_other:
                     for tax_id in skipped_tax_id:
                         if tax_id in temp_other[sample_num]:
@@ -235,7 +236,7 @@ class Misc():
         return TN
     
     def _organize_matrix(self):
-        Juice = cm.Confusion(self.input_path + self.cm_truth, "")
+        Juice = cm.Confusion(os.path.join(self.input_path, self.cm_truth), "")
         tp, fn, fp, tn = self._get_name_and_rank()
         
         names = self.get_matrix_names()
@@ -315,7 +316,7 @@ class Misc():
     def save_as_excel(self, file_path, file_name):
         tp, fn, fp, tn, precision, recall = self.organize_matrix()
         
-        excel_name = file_path + file_name + ".xlsx"
+        excel_name = os.path.join(file_path, file_name + ".xlsx")
         
         with pd.ExcelWriter(excel_name) as writer:
             tp.to_excel(writer, sheet_name="True Positives")
@@ -331,22 +332,22 @@ class Misc():
     
     def main(self, gnd_truth, excel_name="TaxaPerformanceMetrics_byTool", gen_dir="", file_path="", csv="no"):
         gen_paths = glob(gen_dir + "*.profile")
-        self.input_path = "\\".join((gen_paths[0].split("\\")[0:-1])) + "\\"
+        self.input_path = gen_dir
         
-        Juice = cm.Confusion(self.input_path + gnd_truth, "")
+        Juice = cm.Confusion(os.path.join(self.input_path, gnd_truth), "")
         self.set_truth(gnd_truth)
         
         for path in gen_paths:
-            name = path.split("\\").pop(-1)
+            name = os.path.basename(path)
             if name != gnd_truth:
-                Juice.set_file_name(self.input_path + name)
+                Juice.set_file_name(path)
                 self.add_matrix(name, Juice.main("no"))
             
         if csv.lower() == "yes":
             self.save_matrices_as_csv(file_path)
             
         self.save_as_excel(file_path, excel_name)
-        self.write_col_title(file_path + excel_name + ".xlsx")
+        self.write_col_title(os.path.join(file_path, excel_name + ".xlsx"))
         return
 
 
