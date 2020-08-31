@@ -297,7 +297,10 @@ if __name__ == "__main__":
     Samples = Chai.main(f)
     Chai.print_sample(Samples)
     '''
+    
+    '''
     Chai = Parser()
     print(Chai.main("pred.profile", 0))
     print(Chai.main("pred.profile", 1))
+    '''
     
