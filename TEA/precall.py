@@ -316,6 +316,7 @@ class Misc():
             #cell.font = Font(bold=True)
             #cell.alignment = Alignment(horizontal='center', vertical='center')
         workbook.save(path)
+        print("\nSaved as \'{}\'".format(path))
         return
     def save_as_excel(self, file_path, file_name):
         tp, fn, fp, tn, precision, recall = self.organize_matrix()
@@ -329,8 +330,6 @@ class Misc():
             tn.to_excel(writer, sheet_name="True Negatives")
             precision.to_excel(writer, sheet_name="Precision")
             recall.to_excel(writer, sheet_name="Recall")
-            
-        print("\nSaved as \'{}\'".format(excel_name))
         return
     
     
