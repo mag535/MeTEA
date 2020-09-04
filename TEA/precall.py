@@ -391,20 +391,21 @@ class Misc():
             names.append(item.split('.')[0])
         tool_array = np.array(tool_array)
         
-        bray_curt = distance.pdist(np.array(tool_array), 'braycurtis')
-        
-        link = linkage(bray_curt, 'average')
-        set_link_color_palette(['y', 'c', 'g', 'm', 'r'])
-        
-        plt.figure(figsize=[6.4, 10.4], dpi=480)
-        title = metric + ": " + rank + "-Dendrogram"
-        plt.suptitle(title)
-        den = dendrogram(link, orientation='right', labels=names)
-        
-        fn = title.replace(": ", "-")
-        filename = fn.replace(" ", "_") + '.png'
-        plt.savefig(os.path.join(file_path, filename), dpi=480, facecolor='#B4FFDC', transparent=False)
-        
+        if len(tool_array) > 1:
+            bray_curt = distance.pdist(np.array(tool_array), 'braycurtis')
+            
+            link = linkage(bray_curt, 'average')
+            set_link_color_palette(['y', 'c', 'g', 'm', 'r'])
+            
+            plt.figure(figsize=[6.4, 10.4], dpi=480)
+            title = metric + ": " + rank + "-Dendrogram"
+            plt.suptitle(title)
+            den = dendrogram(link, orientation='right', labels=names)
+            
+            fn = title.replace(": ", "-")
+            filename = fn.replace(" ", "_") + '.png'
+            plt.savefig(os.path.join(file_path, filename), dpi=480, facecolor='#B4FFDC', transparent=False)
+            
         plt.close()
         #plt.show()
         
