@@ -14,9 +14,11 @@
   The ground truth file, output excel file name, input file directory for all profiles, and output file directory are all specified when calling the main() function with an object from the  ‘Misc’ class in ‘precall’ (all profile files should be in the same directory, including the ground truth). 
   For example, if your predicted profile files and the ground truth file are in a folder called “inputs” and the ground truth file is called “ground_truth.profile” and you want to save the output files to a folder called “outputs,” the command should be:
 	
-`from precall import Misc
+```python
+from precall import Misc
 Quick = Misc()
-Quick.main(“ground_truth.profile”, “TaxaEvaluation_byTool”, “C:\\Users\\user\\inputs”, “C:\\Users\\user\\outputs”)`
+Quick.main(“ground_truth.profile”, “TaxaEvaluation_byTool”, “C:\\Users\\user\\inputs”, “C:\\Users\\user\\outputs”)
+```
 	
 
 The main function takes in five arguments, three of which are optional:
