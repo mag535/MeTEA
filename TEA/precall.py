@@ -406,7 +406,8 @@ class Misc():
             filename = fn.replace(" ", "_") + '.png'
             plt.savefig(os.path.join(file_path, filename), dpi=480, facecolor='#B4FFDC', transparent=False)
             
-        plt.close()
+            plt.close()
+            print("{} has been saved.".format(filename))
         #plt.show()
         
         # add arg to create subplot grouped by metric or rank (subplot='none'; 'metric'; 'rank')
