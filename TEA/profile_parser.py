@@ -89,7 +89,7 @@ class Parser():
         '''
         return int(part[0][-1])
 
-    def _turn_into_number(self, temp_l):
+    def _turn_into_number(self, abun):
         '''
 
         Parameters
@@ -104,16 +104,11 @@ class Parser():
 
         '''
         val = 0
-        if len(temp_l) > 1:
-            b = temp_l[-1].replace("\n", "")
-            if "e" in b:
-                c = b.split("e")
-                val = float(c[0])*(10**float(c[1]))
-            else:
-                try:
-                    val = float(b)
-                except ValueError:
-                    val = b
+        if "e" in abun:
+            c = abun.split("e")
+            val = float(c[0])*(10**float(c[1]))
+        else:
+            val = float(abun)
         return val
 
     def _get_ranks(self, content):
@@ -136,10 +131,37 @@ class Parser():
             if "@Ranks" in element:
                 r = element.split(":")
                 ranks = r[1].split("|")
+                first = ranks[0]
                 last = ranks[-1]
+                ranks[0] = first.strip()
                 ranks[-1] =  last.strip()
                 break
         return ranks
+    
+    def split_strip_line(self, line):
+        post_line = []
+        
+        if "\t" in line:
+            line = line.replace("\t", " ")
+        pre_line = re.split(" +", line, 3)
+        try:
+            pre_line.pop(2)
+        except:
+            print("HERE 1:", line)
+        
+        end_line = pre_line.pop()[::-1]
+        bend_line = re.split(" +", end_line, 1)
+        abun = bend_line.pop(0)[::-1]
+        
+        for e in pre_line:
+            if (len(e) > 0) and ("|" not in e):
+                post_line.append(e.strip())
+        try:
+            post_line.append(bend_line[0][::-1].strip())
+            post_line.append(abun.strip())
+        except:
+            print("HERE 2:", line)
+        return post_line
 
     def _parse_rank(self, rank, part):
         '''
@@ -160,15 +182,12 @@ class Parser():
         tax_id_holder = {}
     
         for line in part:
-            t = re.split("\t| +", line)
-            t_l = []
-            for e in range(len(t)):
-                if len(t[e]) > 0:
-                    t_l.append(t[e])
-            if rank in t_l:
-                val = self._turn_into_number(t_l)
-                if "." not in t_l[0]:
-                    tax_id_holder[int(t_l[0])] = val
+            if (not re.search("^@.*|^#.*", line)) and (re.search("\s", line.strip())) and (len(line) > 0):
+                t_l = self.split_strip_line(line)
+                if rank in t_l:
+                    if "." not in t_l[0]:
+                        val = self._turn_into_number(t_l[-1])
+                        tax_id_holder[int(t_l[0])] = val
     
         return tax_id_holder
 
@@ -200,12 +219,13 @@ class Parser():
         elif t == 1:
             rank_tax_ids = {}
             for line in part:
-                t_l = re.split("\t| +", line)
-                for rank in ranks:
-                    if rank in t_l:
-                        if "." not in t_l[0]:
-                            rank_tax_ids[int(t_l[0])] = [rank, t_l[3]]
-            
+                if (not re.search("^@.*|^#.*", line)) and (re.search("\s", line.strip())) and (len(line) > 0):
+                    t_l = self.split_strip_line(line)
+                    for rank in ranks:
+                        if rank in t_l:
+                            if "." not in t_l[0]:
+                                rank_tax_ids[int(t_l[0])] = [rank, t_l[2]]
+        
         return rank_tax_ids
 
     def parse_data(self, parts, t=0):
@@ -249,15 +269,17 @@ class Parser():
         None.
 
         '''
+        sorted_keys = sorted(samples)
+        
         if t == 0:
-            for sample_num in samples:
+            for sample_num in sorted_keys:
                 print("Sample Number:", sample_num)
                 for rank in samples[sample_num]:
                     print("\tRank:", rank)
                     for tax_id in samples[sample_num][rank]:
                         print("\t\t{} - {}".format(tax_id, samples[sample_num][rank][tax_id]))
         elif t ==1:
-            for sample_num in samples:
+            for sample_num in sorted_keys:
                 print("Sample Number:", sample_num)
                 for tax_id in samples[sample_num]:
                     print("\tTax ID:", tax_id)

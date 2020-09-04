@@ -10,11 +10,16 @@ Calculating precision and recall
 #%% VARIABLES 7 IMPORTS
 
 import pandas as pd
+import numpy as np
 import TEA.confusion_matrix as cm
 from glob import glob
 from openpyxl import load_workbook
 from openpyxl.styles import Font, Alignment
 import os.path
+
+from scipy.spatial import distance
+from scipy.cluster.hierarchy import linkage, dendrogram, set_link_color_palette
+import matplotlib.pyplot as plt
 
 
 #%% CLASS
@@ -345,12 +350,69 @@ class Misc():
             if (name != gnd_truth) and (name not in self.matrix_dict):
                 Juice.set_file_name(path)
                 self.add_matrix(name, Juice.main("no"))
-            
+        
         if csv.lower() == "yes":
             self.save_matrices_as_csv(file_path)
-            
+        
         self.save_as_excel(file_path, excel_name)
         self.write_col_title(os.path.join(file_path, excel_name + ".xlsx"))
+        
+        sheets = ["True Positives", "False Negatives", "False Positives", "True Negatives"]
+        ranks = self.read_excel(sheets, os.path.join(file_path, excel_name + ".xlsx"))
+        for sheet in sheets:
+            for rank in ranks:
+                self.create_dendrogram(sheet, rank, file_path, os.path.join(file_path, excel_name + ".xlsx"))
+        return
+    
+    def read_excel(self,sheets, excel_path):
+        ranks = []
+        excel_df = pd.read_excel(excel_path, sheet_name=sheets)
+        for rank in excel_df[sheets[0]].loc[:, 'rank']:
+            if rank not in ranks:
+                ranks.append(rank)
+        return ranks
+    
+    def create_dendrogram(self, metric, rank, file_path, excel_path):
+        excel_df = pd.read_excel(excel_path, sheet_name=metric)
+        cols = excel_df.columns
+        tool_array = []
+        names = []
+        lil = []
+        for c in excel_df[cols[3:-1]][:]:
+            for i in range(len(excel_df[c])):
+                if excel_df['rank'][i] == rank:
+                    lil.append(excel_df[c][i])
+            if not all([e==0 for e in lil]):
+                tool_array.append(list(lil))
+                names.append(c.replace('.profile', ''))
+            lil.clear()
+        
+        if len(tool_array) > 1:
+            bray_curt = distance.pdist(np.array(tool_array), 'braycurtis')
+            
+            link = linkage(bray_curt, 'average')
+            set_link_color_palette(['y', 'c', 'g', 'm', 'r'])
+            
+            plt.figure(figsize=[6.4, 10.4], dpi=480)
+            title = metric + ": " + rank + "-Dendrogram"
+            plt.suptitle(title)
+            den = dendrogram(link, orientation='right', labels=names)
+            
+            fn = title.replace(": ", "-")
+            filename = fn.replace(" ", "_") + '.png'
+            plt.savefig(os.path.join(file_path, filename), dpi=480, facecolor='#B4FFDC', transparent=False)
+            
+            plt.close()
+            #plt.show()
+        
+        # sort excel by metric, then rank
+        # turn into arrays for each tool, keep track of tool names (dict?)
+        # calc bray curt
+        # link
+        # create dendros
+        # save plots
+        
+        # add arg to create subplot grouped by metric or rank (subplot='none'; 'metric'; 'rank')
         return
 
 
