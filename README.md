@@ -15,7 +15,7 @@
   For example, if your predicted profile files and the ground truth file are in a folder called “inputs” and the ground truth file is called “ground_truth.profile” and you want to save the output files to a folder called “outputs,” the command should be:
 	
 ```python
-from precall import Misc
+from TEA.precall import Misc
 Quick = Misc()
 Quick.main(“ground_truth.profile”, “TaxaEvaluation_byTool”, “C:\\Users\\user\\inputs”, “C:\\Users\\user\\outputs”)
 ```
