@@ -362,6 +362,7 @@ class Misc():
         for sheet in sheets:
             for rank in ranks:
                 self.create_dendrogram(sheet, rank, file_path, os.path.join(file_path, excel_name + ".xlsx"))
+        print("The Dendrograms have been saved in {}.".format(file_path))
         return
     
     def read_excel(self,sheets, excel_path):
@@ -373,44 +374,39 @@ class Misc():
         return ranks
     
     def create_dendrogram(self, metric, rank, file_path, excel_path):
-        excel_df = pd.read_excel(excel_path, sheet_name=metric)
-        cols = excel_df.columns
+        df = pd.read_excel(excel_path, sheet_name=metric)
+        #df = df[metric]
+        
+        to_remove = ['Tax ID', 'rank', 'name', 'Aggregate']
+        cols = [col for col in df.columns if col not in to_remove]
+        
+        tmp_df = df[df['rank'] == rank]
         tool_array = []
         names = []
-        lil = []
-        for c in excel_df[cols[3:-1]][:]:
-            for i in range(len(excel_df[c])):
-                if excel_df['rank'][i] == rank:
-                    lil.append(excel_df[c][i])
-            if not all([e==0 for e in lil]):
-                tool_array.append(list(lil))
-                names.append(c.replace('.profile', ''))
-            lil.clear()
+        for item in cols:
+            res = tmp_df[item]
+            if np.sum(res) == 0:
+                continue
+            tool_array.append(res.tolist())
+            names.append(item.split('.')[0])
+        tool_array = np.array(tool_array)
         
-        if len(tool_array) > 1:
-            bray_curt = distance.pdist(np.array(tool_array), 'braycurtis')
-            
-            link = linkage(bray_curt, 'average')
-            set_link_color_palette(['y', 'c', 'g', 'm', 'r'])
-            
-            plt.figure(figsize=[6.4, 10.4], dpi=480)
-            title = metric + ": " + rank + "-Dendrogram"
-            plt.suptitle(title)
-            den = dendrogram(link, orientation='right', labels=names)
-            
-            fn = title.replace(": ", "-")
-            filename = fn.replace(" ", "_") + '.png'
-            plt.savefig(os.path.join(file_path, filename), dpi=480, facecolor='#B4FFDC', transparent=False)
-            
-            plt.close()
-            #plt.show()
+        bray_curt = distance.pdist(np.array(tool_array), 'braycurtis')
         
-        # sort excel by metric, then rank
-        # turn into arrays for each tool, keep track of tool names (dict?)
-        # calc bray curt
-        # link
-        # create dendros
-        # save plots
+        link = linkage(bray_curt, 'average')
+        set_link_color_palette(['y', 'c', 'g', 'm', 'r'])
+        
+        plt.figure(figsize=[6.4, 10.4], dpi=480)
+        title = metric + ": " + rank + "-Dendrogram"
+        plt.suptitle(title)
+        den = dendrogram(link, orientation='right', labels=names)
+        
+        fn = title.replace(": ", "-")
+        filename = fn.replace(" ", "_") + '.png'
+        plt.savefig(os.path.join(file_path, filename), dpi=480, facecolor='#B4FFDC', transparent=False)
+        
+        plt.close()
+        #plt.show()
         
         # add arg to create subplot grouped by metric or rank (subplot='none'; 'metric'; 'rank')
         return
