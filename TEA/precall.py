@@ -308,7 +308,7 @@ class Misc():
         recall_df = pd.DataFrame.from_dict(sorted_recall, orient="index")
         return tp_df, fn_df, fp_df, tn_df, precision_df, recall_df
     
-    def write_col_title(self, path):
+    def _write_col_title(self, path):
         workbook = load_workbook(path)
         for name in workbook.sheetnames:
             sheet = workbook[name]
@@ -316,10 +316,6 @@ class Misc():
             c.value = "Tax ID"
             c.font = Font(bold=True)
             c.alignment = Alignment(horizontal='center', vertical='center')
-            #cell = sheet.cell(1,1)
-            #cell.value = "Tax ID"
-            #cell.font = Font(bold=True)
-            #cell.alignment = Alignment(horizontal='center', vertical='center')
         workbook.save(path)
         print("\nSaved as \'{}\'".format(path))
         return
@@ -335,6 +331,8 @@ class Misc():
             tn.to_excel(writer, sheet_name="True Negatives")
             precision.to_excel(writer, sheet_name="Precision")
             recall.to_excel(writer, sheet_name="Recall")
+        
+        self._write_col_title(excel_name)
         return
     
     
@@ -355,7 +353,7 @@ class Misc():
             self.save_matrices_as_csv(file_path)
         
         self.save_as_excel(file_path, excel_name)
-        self.write_col_title(os.path.join(file_path, excel_name + ".xlsx"))
+        
         
         sheets = ["True Positives", "False Negatives", "False Positives", "True Negatives"]
         ranks = self.read_excel(sheets, os.path.join(file_path, excel_name + ".xlsx"))
