@@ -31,14 +31,14 @@ class Precall():
     def _calculate_precision(self, tp, fp):     # (TP) / (TP+FP)
         precision = 0
         if (tp==0) and (fp==0):
-            precision = "nan"
+            precision = np.nan
         else:
             precision = (tp) / (tp+fp)
         return precision
     def _calculate_recall(self, tp, fn):        # (TP) / (TP+FN)
         recall = 0
         if (tp==0) and (fn==0):
-            recall = "nan"
+            recall = np.nan
         else:
             recall = (tp) / (tp+fn)
         return recall
@@ -58,9 +58,9 @@ class Precall():
         for name in matrices:
             for tax_id in tax_id_precision:
                 if name not in tax_id_precision[tax_id]:
-                    tax_id_precision[tax_id][name] = "nan"
+                    tax_id_precision[tax_id][name] = np.nan
                 if name not in tax_id_recall[tax_id]:
-                    tax_id_recall[tax_id][name] = "nan"
+                    tax_id_recall[tax_id][name] = np.nan
         return tax_id_precision, tax_id_recall
     
     
@@ -112,19 +112,6 @@ class Misc():
             print("There is no matrix by the name \'{}\'".format(name))
         return
     
-    def show_matrices(self, name=""):
-        if name == "":      # print all
-            print()
-            for key in self.matrix_dict:
-                print(key)
-                #print("\t-", self.matrix_dict[key])
-        elif name in self.matrix_dict:       # print one
-            print(name)
-            print("\t-", self.matrix_dict[name])
-        else:
-            print("There is no matrix by the name \'{}\'".format(name))
-        return
-    
     def create_table(self, name=""):
         Juice = cm.Confusion(os.path.join(self.input_path, self.cm_truth), "")
         if name == "":
@@ -137,20 +124,6 @@ class Misc():
             self.matrix_tables[name] = Juice.create_matrix_table(Juice.reformat_matrix(Juice.add_other_info(self.matrix_dict[name])))
         else:
             print("There is no matrix by the name \'{}\'".format(name))
-        return
-    
-    def show_tables(self, name=''):
-        if name == "":
-            print()
-            for key in self.matrix_tables:
-                print(key)
-                print(self.matrix_tables[key])
-        elif name in self.matrix_tables:
-            print(name)
-            print(self.matrix_tables[name])
-        else:
-            print("There is no matrix table by the name \'{}\'".format(name))
-            
         return
     
     def save_matrices_as_csv(self, file_path):
@@ -264,23 +237,6 @@ class Misc():
                     FN[tax_id][name] = 0
                 if name not in FP[tax_id]:
                     FP[tax_id][name] = 0
-        
-        for tax_id in TP:
-            total_TP = 0
-            total_FN = 0
-            total_FP = 0
-            total_TN = 0
-            for tool in TP[tax_id]:
-                if (tool != "rank") and (tool != "name"):
-                    total_TP += int(TP[tax_id][tool])
-                    total_FN += FN[tax_id][tool]
-                    total_FP += FP[tax_id][tool]
-                    total_TN += TN[tax_id][tool]
-            TP[tax_id]["Aggregate"] = total_TP
-            FN[tax_id]["Aggregate"] = total_FN
-            FP[tax_id]["Aggregate"] = total_FP
-            TN[tax_id]["Aggregate"] = total_TN
-        
         return TP, FN, FP, TN
     
     def organize_matrix(self):
@@ -288,24 +244,33 @@ class Misc():
         tp, fn, fp, tn = self._organize_matrix()
         precision, recall = Calc.calculate_precision_and_recall(self.matrix_dict)
         
-        sorted_tp, sorted_fn, sorted_fp, sorted_tn, sorted_precision, sorted_recall = {}, {}, {}, {}, {}, {}
-        sorted_tax_ids = sorted(set(tp.keys()) | set(fn.keys()) | set(fp.keys()) | set(tn.keys()))
+        #### Creating DataFrames
+        tp_df = pd.DataFrame.from_dict(tp, orient='index')
+        fn_df = pd.DataFrame.from_dict(fn, orient="index")
+        fp_df = pd.DataFrame.from_dict(fp, orient="index")
+        tn_df = pd.DataFrame.from_dict(tn, orient="index")
+        precision_df = pd.DataFrame.from_dict(precision, orient='index')
+        recall_df = pd.DataFrame.from_dict(recall, orient="index")
         
-        for key in sorted_tax_ids:
-            sorted_tp[key] = tp[key]
-            sorted_fn[key] = fn[key]
-            sorted_fp[key] = fp[key]
-            sorted_tn[key] = tn[key]
-            sorted_precision[key] = precision[key]
-            sorted_recall[key] = recall[key]
+        ### Creating 'Aggregate' column
+        tp_df['Aggregate'] = tp_df.sum(axis=1)
+        fn_df['Aggregate'] = fn_df.sum(axis=1)
+        fp_df['Aggregate'] = fp_df.sum(axis=1)
+        tn_df['Aggregate'] = tn_df.sum(axis=1)
+        precision_df['Aggregate'] = tp_df['Aggregate'] / (tp_df['Aggregate'] + fp_df['Aggregate']) # TP / (TP+FP)
+        recall_df['Aggregate'] = tp_df['Aggregate'] / (tp_df['Aggregate'] + fn_df['Aggregate']) # TP / (TP+FN)
         
+        ### Sorting
+        tp_df.sort_index(inplace=True)
+        fn_df.sort_index(inplace=True)
+        fp_df.sort_index(inplace=True)
+        tn_df.sort_index(inplace=True)
+        precision_df.sort_index(inplace=True)
+        recall_df.sort_index(inplace=True)
         
-        tp_df = pd.DataFrame.from_dict(sorted_tp, orient="index")
-        fn_df = pd.DataFrame.from_dict(sorted_fn, orient="index")
-        fp_df = pd.DataFrame.from_dict(sorted_fp, orient="index")
-        tn_df = pd.DataFrame.from_dict(sorted_tn, orient="index")
-        precision_df = pd.DataFrame.from_dict(sorted_precision, orient="index")
-        recall_df = pd.DataFrame.from_dict(sorted_recall, orient="index")
+        ### Changing np.nan to 'nan'
+        precision_df = precision_df.fillna('nan')
+        recall_df = recall_df.fillna('nan')
         return tp_df, fn_df, fp_df, tn_df, precision_df, recall_df
     
     def _write_col_title(self, path):
@@ -354,7 +319,6 @@ class Misc():
         
         self.save_as_excel(file_path, excel_name)
         
-        
         sheets = ["True Positives", "False Negatives", "False Positives", "True Negatives"]
         ranks = self.read_excel(sheets, os.path.join(file_path, excel_name + ".xlsx"))
         for sheet in sheets:
@@ -395,14 +359,14 @@ class Misc():
             link = linkage(bray_curt, 'average')
             set_link_color_palette(['y', 'c', 'g', 'm', 'r'])
             
-            plt.figure(figsize=[6.4, 10.4], dpi=480)
+            plt.figure(figsize=[20.4, 10.4],dpi=480)
             title = metric + ": " + rank + "-Dendrogram"
             plt.suptitle(title)
             den = dendrogram(link, orientation='right', labels=names)
             
             fn = title.replace(": ", "-")
             filename = fn.replace(" ", "_") + '.png'
-            plt.savefig(os.path.join(file_path, filename), dpi=480, facecolor='#B4FFDC', transparent=False)
+            plt.savefig(os.path.join(file_path, filename), dpi=480, facecolor='#B4FFDC', transparent=False, bbox_inches='tight')
             
             plt.close()
             print("{} has been saved.".format(filename))

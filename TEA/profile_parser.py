@@ -142,7 +142,7 @@ class Parser():
         post_line = []
         
         if "\t" in line:
-            line = line.replace("\t", " ")
+            line = line.strip().replace("\t", " ")
         pre_line = re.split(" +", line, 3)
         try:
             pre_line.pop(2)
