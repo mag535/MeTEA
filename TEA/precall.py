@@ -11,6 +11,7 @@ Calculating precision and recall
 
 import pandas as pd
 import numpy as np
+import re
 import TEA.confusion_matrix as cm
 from glob import glob
 from openpyxl import load_workbook
@@ -74,6 +75,9 @@ class Misc():
         self.saved = {}
         self.cm_truth = ""
         self.input_path = ""
+        self.output_path = ""
+        self.output_name = ""
+        self.true_taxid = []
         return
     
     # GETTERS
@@ -90,12 +94,23 @@ class Misc():
         return names_list
     def get_input_path(self):
         return self.input_path
+    def get_output_path(self):
+        return self.output_path
+    def get_output_name(self):
+        return self.output_name
     
+    # SETTERS
     def set_truth(self, truth):
         self.cm_truth = truth
         return
     def set_input_path(self, ip):
         self.input_path = ip
+        return
+    def set_output_path(self, op):
+        self.output_path = op
+        return
+    def set_output_name(self, on):
+        self.output_name = on
         return
       
     def add_matrix(self, name, matrix):
@@ -161,6 +176,8 @@ class Misc():
                         tn[tax_id] = {}
                         tn[tax_id]["rank"] = truth_other[sample_num][tax_id][0]
                         tn[tax_id]["name"] = truth_other[sample_num][tax_id][1]
+                        
+                        self.true_taxid.append(tax_id)
                     else:
                         skipped_tax_id.append(tax_id)
         
@@ -304,6 +321,8 @@ class Misc():
     def main(self, gnd_truth, excel_name="TaxaPerformanceMetrics_byTool", gen_dir="", file_path="", csv="no"):
         gen_paths = glob(os.path.join(gen_dir, "*.profile"))
         self.input_path = gen_dir
+        self.output_path = file_path
+        self.output_name = excel_name
         
         Juice = cm.Confusion(os.path.join(self.input_path, gnd_truth), "")
         self.set_truth(gnd_truth)
@@ -315,34 +334,42 @@ class Misc():
                 self.add_matrix(name, Juice.main("no"))
         
         if csv.lower() == "yes":
-            self.save_matrices_as_csv(file_path)
+            self.save_matrices_as_csv(self.output_path)
         
-        self.save_as_excel(file_path, excel_name)
+        self.save_as_excel(self.output_path, excel_name)
+        
         
         sheets = ["True Positives", "False Negatives", "False Positives", "True Negatives"]
-        ranks = self.read_excel(sheets, os.path.join(file_path, excel_name + ".xlsx"))
         for sheet in sheets:
+            ranks = self.read_excel(sheet, os.path.join(self.output_path, excel_name + ".xlsx"))
+            ranks.append("")
             for rank in ranks:
-                self.create_dendrogram(sheet, rank, file_path, os.path.join(file_path, excel_name + ".xlsx"))
-        print("The Dendrograms have been saved in {}.".format(file_path))
+                self.create_dendrogram(sheet, rank, os.path.join(self.output_path, excel_name + ".xlsx"))
+        print("\nThe Dendrograms have been saved in {}.".format(self.output_path))
+        
         return
     
-    def read_excel(self,sheets, excel_path):
+    def read_excel(self,sheet, excel_path):
         ranks = []
-        excel_df = pd.read_excel(excel_path, sheet_name=sheets)
-        for rank in excel_df[sheets[0]].loc[:, 'rank']:
+        excel_df = pd.read_excel(excel_path, sheet_name=sheet)
+        for rank in excel_df.loc[:, 'rank']:
             if rank not in ranks:
                 ranks.append(rank)
         return ranks
     
-    def create_dendrogram(self, metric, rank, file_path, excel_path):
-        df = pd.read_excel(excel_path, sheet_name=metric)
-        #df = df[metric]
-        
+    def create_dendrogram(self, metric, rank, excel_path):
         to_remove = ['Tax ID', 'rank', 'name', 'Aggregate']
-        cols = [col for col in df.columns if col not in to_remove]
+        cols = []
         
-        tmp_df = df[df['rank'] == rank]
+        if rank == '':
+            # make dendrogram over all ranks
+            tmp_df = self.trace_back(metric)
+        else:
+            df = pd.read_excel(excel_path, sheet_name=metric)
+            tmp_df = df[df['rank'] == rank]
+            cols = [col for col in df.columns if col not in to_remove]
+        
+        
         tool_array = []
         names = []
         for item in cols:
@@ -361,19 +388,142 @@ class Misc():
             
             plt.figure(figsize=[20.4, 10.4],dpi=480)
             title = metric + ": " + rank + "-Dendrogram"
-            plt.suptitle(title)
+            plt.suptitle(title, size=36, weight='semibold')
             den = dendrogram(link, orientation='right', labels=names)
             
+            plt.xlim(-0.1, 1.1)
             fn = title.replace(": ", "-")
             filename = fn.replace(" ", "_") + '.png'
-            plt.savefig(os.path.join(file_path, filename), dpi=480, facecolor='#B4FFDC', transparent=False, bbox_inches='tight')
+            plt.savefig(os.path.join(self.output_path, filename), dpi=480, facecolor='#B4FFDC', transparent=False, bbox_inches='tight')
             
             plt.close()
-            print("{} has been saved.".format(filename))
+            print("\n{} has been saved.".format(filename))
         #plt.show()
         
         # add arg to create subplot grouped by metric or rank (subplot='none'; 'metric'; 'rank')
         return
+    
+    def trace_back(self, metric):
+        Chai = cm.comp.pp.Parser()
+        true_samples = Chai.main(os.path.join(self.input_path, self.cm_truth), 1)
+        preds = self.get_matrix_names()
+        true_data = {}
+        data = {}
+        
+        # to get true data
+        sample_sum = 0
+        for sample in true_samples:
+            sample_sum += 1
+            true_data[sample] = set()
+            for tax_id in true_samples[sample]:
+                parent_ids = re.split('\|', true_samples[sample][tax_id][2])
+                for parent in parent_ids:
+                    true_data[sample].add(int(parent.strip()))
+        
+        # to get perdicted data
+        for name in preds:
+            data[name] = {}
+            matrix = Chai.main(os.path.join(self.input_path, name), 1)
+            for sample in matrix:
+                data[name][sample] = set()
+                for tax_id in matrix[sample]:
+                    parent_ids = re.split('\|', matrix[sample][tax_id][2])
+                    for parent in parent_ids:
+                        data[name][sample].add(int(parent.strip()))
+        
+        Tea = cm.comp.Comparator()
+        Juice = cm.Confusion('', '')
+        new_matrix = {}
+        for name in data:
+            combined_taxid = Tea.combine_tax_ID(true_data, data[name])
+            new_matrix[name] = Juice.confusion_matrix(true_data, data[name], combined_taxid)
+        
+        # make a data from for the correct metric
+        df = pd.DataFrame()
+        if metric == 'True Postives':
+            TP = {}
+            for name in new_matrix:
+                for tax_id in new_matrix[name]:
+                    if tax_id not in TP:
+                        TP[tax_id] = {}
+                    if name not in TP[tax_id]:
+                        TP[tax_id][name] = new_matrix[name][tax_id][0]
+            df = pd.DataFrame.from_dict(TP, orient='index')
+        elif metric == 'False Negatives':
+            FN = {}
+            for name in new_matrix:
+                for tax_id in new_matrix[name]:
+                    if tax_id not in FN:
+                        FN[tax_id] = {}
+                    if name not in FN[tax_id]:
+                        FN[tax_id][name] = new_matrix[name][tax_id][1]
+            df = pd.DataFrame.from_dict(FN, orient='index')
+        elif metric == 'False Postives':
+            FP = {}
+            for name in new_matrix:
+                for tax_id in new_matrix[name]:
+                    if tax_id not in FP:
+                        FP[tax_id] = {}
+                    if name not in FP[tax_id]:
+                        FP[tax_id][name] = new_matrix[name][tax_id][2]
+            df = pd.DataFrame.from_dict(FP, orient='index')
+        elif metric == 'True Negatives':
+            TN = {}
+            for name in new_matrix:
+                for tax_id in new_matrix[name]:
+                    if tax_id not in TN:
+                        TN[tax_id] = {}
+                    if name not in TN[tax_id]:
+                        TN[tax_id][name] = new_matrix[name][tax_id][3]
+            df = pd.DataFrame.from_dict(TN, orient='index')
+            
+        
+        return df.fillna(0)
+    
+    def get_top_taxid(self, x, metric='precall', difficulty='easy', truth="no"):
+        excel_name =os.path.join(self.output_path, self.output_name) + '.xlsx'
+        metric_df = pd.DataFrame()
+        
+        metric_df['Tax ID'] = pd.read_excel(excel_name, sheet_name='Precision')['Tax ID']
+        if metric.lower() == 'precall':
+            metric_df['Pre-Agg'] = pd.read_excel(excel_name, sheet_name='Precision')['Aggregate']
+            metric_df['Re-Agg'] = pd.read_excel(excel_name, sheet_name='Recall')['Aggregate']
+            metric_df['Average'] = (metric_df['Pre-Agg'] + metric_df['Re-Agg']) / 2
+            base = 'Average'
+        elif metric.lower() == 'tp':
+            base = 'TP-Agg'
+            metric_df[base] = pd.read_excel(excel_name, sheet_name='True Positives')['Aggregate']
+        elif metric.lower() == 'fn':
+            base = 'FN-Agg'
+            metric_df[base] = pd.read_excel(excel_name, sheet_name='False Negatives')['Aggregate']
+        elif metric.lower() == 'fp':
+            base = 'FP-Agg'
+            metric_df[base] = pd.read_excel(excel_name, sheet_name='False Positives')['Aggregate']
+        elif metric.lower() == 'tn':
+            base = 'TN-Agg'
+            metric_df[base] = pd.read_excel(excel_name, sheet_name='True Negatives')['Aggregate']
+        
+        if truth.lower() == 'yes':
+            Juice = cm.Confusion(self.cm_truth, '')
+            Tea = cm.comp.Comparator()
+            Chai = cm.comp.pp.Parser()
+            untrue_taxids = Juice.dictionary_to_set(Tea.save_tax_ID(Chai.main(os.path.join(self.input_path, self.cm_truth)))) ^ set(metric_df['Tax ID'])
+            untrue_indices = []
+            for utt in untrue_taxids:
+                untrue_indices.append(metric_df[metric_df['Tax ID']==utt].index.values[0])
+            metric_df.drop(untrue_indices, inplace=True)
+        
+        if difficulty.lower() == 'easy':
+            order = False
+            nan_pos = 'last'
+        elif difficulty.lower() == 'hard':
+            order = True
+            nan_pos = 'last'
+        elif difficulty.lower() == 'nan':
+            order = True
+            nan_pos = 'first'
+            
+        return metric_df.sort_values(by=base, ascending=order, na_position=nan_pos).iloc[0:x, :]
 
 
 #%% MAIN

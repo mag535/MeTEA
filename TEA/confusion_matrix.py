@@ -288,7 +288,7 @@ class Confusion():
             true_negatives[tax_id] = self._check_true_negatives(tax_id, truth, predicted)
         return true_negatives
 
-    def confusion_matrix(self, truth, predicted, common, combined):
+    def confusion_matrix(self, truth, predicted, combined):
         '''
     
         Parameters
@@ -298,9 +298,6 @@ class Confusion():
             Used as the gold standard
         predicted : dictionary
             where sample number is the key and a set of tax_IDs is the value
-        common : dictionary
-            where sample number is the key and a set of tax_IDs found in both 
-            truth and predicted is the value
         combined: dictionary
             where sample number is the key and a set of tax_IDs from both 
             truth and predicted is the value
@@ -350,10 +347,9 @@ class Confusion():
         predicted = Tea.save_tax_ID(Chai.main(self.file_name, t))
         
         files = self.truth + " " + self.file_name
-        common = Tea.common_tax_ID(truth, predicted)
         combined = Tea.combine_tax_ID(truth, predicted)
     
-        matrix = self.confusion_matrix(truth, predicted, common, combined)
+        matrix = self.confusion_matrix(truth, predicted, combined)
         
         if csv.lower() == "yes":
             self.save_matrix_table(self.create_matrix_table(self.reformat_matrix(self.add_other_info(matrix))), files)
