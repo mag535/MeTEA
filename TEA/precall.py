@@ -21,6 +21,7 @@ import os.path
 from scipy.spatial import distance
 from scipy.cluster.hierarchy import linkage, dendrogram, set_link_color_palette
 import matplotlib.pyplot as plt
+import matplotlib
 
 
 #%% CLASS
@@ -358,8 +359,6 @@ class Misc():
         return ranks
     
     def create_dendrogram(self, metric, rank, excel_path):
-        to_remove = ['Tax ID', 'rank', 'name', 'Aggregate']
-        cols = []
         
         if rank == '':
             # make dendrogram over all ranks
@@ -367,8 +366,9 @@ class Misc():
         else:
             df = pd.read_excel(excel_path, sheet_name=metric)
             tmp_df = df[df['rank'] == rank]
-            cols = [col for col in df.columns if col not in to_remove]
-        
+            
+        to_remove = ['Tax ID', 'rank', 'name', 'Aggregate']
+        cols = [col for col in tmp_df.columns if col not in to_remove]
         
         tool_array = []
         names = []
@@ -381,6 +381,7 @@ class Misc():
         tool_array = np.array(tool_array)
         
         if len(tool_array) > 1:
+            matplotlib.rcParams['lines.linewidth'] = 3
             bray_curt = distance.pdist(np.array(tool_array), 'braycurtis')
             
             link = linkage(bray_curt, 'average')
@@ -392,9 +393,12 @@ class Misc():
             den = dendrogram(link, orientation='right', labels=names)
             
             plt.xlim(-0.1, 1.1)
+            plt.xlabel("Bray Curtis Distance", fontsize=20, weight='semibold', labelpad=15)
+            plt.ylabel("Tools", fontsize=20, weight='semibold', labelpad=30)
+            plt.tick_params(labelsize=16, labelcolor='#00213E')
             fn = title.replace(": ", "-")
             filename = fn.replace(" ", "_") + '.png'
-            plt.savefig(os.path.join(self.output_path, filename), dpi=480, facecolor='#B4FFDC', transparent=False, bbox_inches='tight')
+            plt.savefig(os.path.join(self.output_path, filename), dpi=480, facecolor='#F5FFFF', transparent=False, bbox_inches='tight')
             
             plt.close()
             print("\n{} has been saved.".format(filename))
@@ -418,9 +422,11 @@ class Misc():
             for tax_id in true_samples[sample]:
                 parent_ids = re.split('\|', true_samples[sample][tax_id][2])
                 for parent in parent_ids:
-                    true_data[sample].add(int(parent.strip()))
+                    if parent.strip().isnumeric():
+                        #search later for line that was empty string
+                        true_data[sample].add(int(parent.strip()))
         
-        # to get perdicted data
+        # to get predicted data
         for name in preds:
             data[name] = {}
             matrix = Chai.main(os.path.join(self.input_path, name), 1)
@@ -429,7 +435,9 @@ class Misc():
                 for tax_id in matrix[sample]:
                     parent_ids = re.split('\|', matrix[sample][tax_id][2])
                     for parent in parent_ids:
-                        data[name][sample].add(int(parent.strip()))
+                        if parent.strip().isnumeric():
+                            #search later for line that was empty string
+                            data[name][sample].add(int(parent.strip()))
         
         Tea = cm.comp.Comparator()
         Juice = cm.Confusion('', '')
@@ -440,7 +448,7 @@ class Misc():
         
         # make a data from for the correct metric
         df = pd.DataFrame()
-        if metric == 'True Postives':
+        if metric == 'True Positives':
             TP = {}
             for name in new_matrix:
                 for tax_id in new_matrix[name]:
@@ -458,7 +466,7 @@ class Misc():
                     if name not in FN[tax_id]:
                         FN[tax_id][name] = new_matrix[name][tax_id][1]
             df = pd.DataFrame.from_dict(FN, orient='index')
-        elif metric == 'False Postives':
+        elif metric == 'False Positives':
             FP = {}
             for name in new_matrix:
                 for tax_id in new_matrix[name]:
@@ -522,8 +530,11 @@ class Misc():
         elif difficulty.lower() == 'nan':
             order = True
             nan_pos = 'first'
-            
-        return metric_df.sort_values(by=base, ascending=order, na_position=nan_pos).iloc[0:x, :]
+        
+        needed_df = metric_df.sort_values(by=base, ascending=order, na_position=nan_pos).iloc[0:x, :]
+        needed_df.to_excel(os.path.join(self.output_path, 'Top_'+difficulty+'_taxid.xlsx'))
+        print('\nSaved as {}'.format(os.path.join(self.output_path, 'Top_'+difficulty+'_taxid.xlsx')))
+        return
 
 
 #%% MAIN
