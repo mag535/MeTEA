@@ -31,7 +31,7 @@ The main function takes in five arguments, three of which are optional:
 
 A spreadsheet and heat map of the top Taxa based on difficulty and a metric can also me made.
 
-```
+```python
 Quick.get_top_taxid(3, 'tp', 'easy', 'yes')
 Quick.create_heat_map('Top_Easy-TP_taxid.xlsx')
 ```
