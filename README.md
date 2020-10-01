@@ -29,4 +29,25 @@ The main function takes in five arguments, three of which are optional:
 - (optional) "yes" if you want individual .csv files of each tool's confusion matrix; <Default: "no">
 
 
+A spreadsheet and heat map of the top Taxa based on difficulty and a metric can also me made.
+
+```
+Quick.get_top_taxid(3, 'tp', 'easy', 'yes')
+Quick.create_heat_map('Top_Easy-TP_taxid.xlsx')
+```
+
+Arguments <*get_top_taxid()*>:
+- Input: The number of Tax IDs to include
+- (optional) The metric to evaluate by; <Default: "tp" (True Positives)>
+- (optional) The difficulty level; <Default: "eas">
+- (optional) "yes" if you want to only include Tax IDs present in the ground truth profile, "no" if you want to include Tax IDs found in the ground truth and predicted profiles; <Default: "yes">
+
+The output is a .xlsx file containing the Tax IDs. It's name is formatted like this: *'Top_Difficulty-METRIC_taxid.xlsx'*
+
+Arguments <*create_heat_map()*>:
+- Input: The name of the spreadsheet containing the list of Tax IDs. They should be formatted into a column labeled 'Tax ID'.
+
+The output is a heat map with a dnedrogram at the top. It's name is formatted as the name of the input file with the extentsion replaced with *'_Heat_Map.png'*.
+
+
 You can find a quick start example and more details on the package in the jupyter note book 'Package Manual'.
