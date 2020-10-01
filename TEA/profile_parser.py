@@ -18,6 +18,11 @@ Data Tree:
     - {Sample # : dict}
                 - {rank : dict}
                         - {tax_id : abundance}
+
+Data Tree (alt):
+    - {Sample # : dict}
+                - {tax_id : array}
+                          - [Rank, Name, Path]
 '''
 
 
@@ -142,19 +147,15 @@ class Parser():
         post_line = []
         
         if "\t" in line:
-            line = line.replace("\t", " ")
+            line = line.strip().replace("\t", " ")
         pre_line = re.split(" +", line, 3)
-        try:
-            pre_line.pop(2)
-        except:
-            print("HERE 1:", line)
         
         end_line = pre_line.pop()[::-1]
         bend_line = re.split(" +", end_line, 1)
         abun = bend_line.pop(0)[::-1]
         
         for e in pre_line:
-            if (len(e) > 0) and ("|" not in e):
+            if (len(e) > 0):
                 post_line.append(e.strip())
         try:
             post_line.append(bend_line[0][::-1].strip())
@@ -223,8 +224,8 @@ class Parser():
                     t_l = self.split_strip_line(line)
                     for rank in ranks:
                         if rank in t_l:
-                            if "." not in t_l[0]:
-                                rank_tax_ids[int(t_l[0])] = [rank, t_l[2]]
+                            if ("." not in t_l[0]):
+                                rank_tax_ids[int(t_l[0])] = [rank, t_l[3], t_l[2]]
         
         return rank_tax_ids
 
@@ -254,7 +255,31 @@ class Parser():
             parsed_taxID = self._parse_tax_IDs(p, ranks, t)
             samples[sn] = parsed_taxID
         return samples
+    
+    def main(self, f, t=0):
+        '''
+        # For when this file isn't being directly run
 
+        Parameters
+        ----------
+        f : string
+            first part of the profile file name (don't include the ".profile" part, 
+                                             ie. "A_1" or "C_3")
+        t : integer, optional
+            to toggle the type of parsing. 0 (default) and 1 are the options
+
+        Returns
+        -------
+        samples : dictionary
+            where the sample number is the key and a dictionary of dictionaries 
+            is the value (see Data Tree under 'VARIABLES' section)
+
+        '''
+        self.file_name = f
+        samples = self.parse_data(self.divide_content(self.get_file(f)), t)
+        #print("done (pp).")
+        return samples
+    
     def print_samples(self, samples, t=0):
         '''
 
@@ -278,36 +303,13 @@ class Parser():
                     print("\tRank:", rank)
                     for tax_id in samples[sample_num][rank]:
                         print("\t\t{} - {}".format(tax_id, samples[sample_num][rank][tax_id]))
-        elif t ==1:
+        elif t == 1:
             for sample_num in sorted_keys:
                 print("Sample Number:", sample_num)
                 for tax_id in samples[sample_num]:
                     print("\tTax ID:", tax_id)
                     print("\t\tRank - {}, Name - {}".format(samples[sample_num][tax_id][0], samples[sample_num][tax_id][1]))
         return
-
-    def main(self, f, t=0):
-        '''
-        # For when this file isn't being directly run
-
-        Parameters
-        ----------
-        f : string
-            first part of the profile file name (don't include the ".profile" part, 
-                                             ie. "A_1" or "C_3")
-        t : integer, optional
-            to toggle the type of parsing. 0 (default) and 1 are the options
-
-        Returns
-        -------
-        samples : dictionary
-            where the sample number is the key and a dictionary of dictionaries 
-            is the value (see Data Tree under 'VARIABLES' section)
-
-        '''
-        samples = self.parse_data(self.divide_content(self.get_file(f)), t)
-        #print("done (pp).")
-        return samples
 
 
 #%% MAIN

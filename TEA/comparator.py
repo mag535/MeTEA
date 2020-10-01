@@ -209,28 +209,6 @@ class Comparator():
                 print("\t\t{}".format(t))
         return
 
-def example():
-    Chip = Comparator()
-    '''
-
-    Returns
-    -------
-    None.
-
-    '''
-    a = {1 : {1,2,3}, 2 : {3,4,5}}
-    print("a - ", a)
-    b = {1 : {1,3,4}, 2 : {4,5,6}}
-    print("b - ", b, "\n")
-    
-    ab = Chip.common_tax_ID(a, b)
-    a_b  = Chip.combine_tax_ID(a, b)
-    print("COMMON:")
-    Chip.print_tax_ID(ab)
-    print()
-    print("COMBINED")
-    Chip.print_tax_ID(a_b)
-    return
 
 
 #%% MAIN
