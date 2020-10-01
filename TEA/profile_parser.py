@@ -224,7 +224,7 @@ class Parser():
                     t_l = self.split_strip_line(line)
                     for rank in ranks:
                         if rank in t_l:
-                            if "." not in t_l[0]:
+                            if ("." not in t_l[0]):
                                 rank_tax_ids[int(t_l[0])] = [rank, t_l[3], t_l[2]]
         
         return rank_tax_ids

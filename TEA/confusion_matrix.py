@@ -9,6 +9,7 @@ Created on Thu Aug 13 15:26:55 2020
 
 import numpy as np
 import pandas as pd
+import re
 import TEA.comparator as comp
 
 '''
@@ -320,7 +321,7 @@ class Confusion():
     
         for tax_id in True_Pos:
             m = np.array([True_Pos[tax_id], False_Neg[tax_id], False_Pos[tax_id], True_Neg[tax_id]])
-            matrix[int(tax_id)] = m
+            matrix[tax_id] = m
         return matrix
 
     def main(self, csv="yes", t=0):
@@ -346,7 +347,11 @@ class Confusion():
         truth = Tea.save_tax_ID(Chai.main(self.truth, t))
         predicted = Tea.save_tax_ID(Chai.main(self.file_name, t))
         
-        files = self.truth + " " + self.file_name
+        if '\\' in self.truth:
+            f1 = re.split('\\\\', self.truth).pop()
+        if '\\' in self.file_name:
+            f2 = re.split('\\\\', self.file_name).pop()
+        files = f1 + " " + f2
         combined = Tea.combine_tax_ID(truth, predicted)
     
         matrix = self.confusion_matrix(truth, predicted, combined)
@@ -458,10 +463,10 @@ class Confusion():
         for k in sorted_matrix_table:
             rank_list.append(sorted_matrix_table[k][0])
             name_list.append(sorted_matrix_table[k][1])
-            TP_list.append(sorted_matrix_table[k][2])
-            FN_list.append(sorted_matrix_table[k][3])
-            FP_list.append(sorted_matrix_table[k][4])
-            TN_list.append(sorted_matrix_table[k][5])
+            TP_list.append(sorted_matrix_table[k][3])
+            FN_list.append(sorted_matrix_table[k][4])
+            FP_list.append(sorted_matrix_table[k][5])
+            TN_list.append(sorted_matrix_table[k][6])
     
         reformatted_matrix["Rank"] = rank_list
         reformatted_matrix["Name"] = name_list
@@ -500,75 +505,9 @@ class Confusion():
         s_list.reverse()
         for l in s_list:
             export_file_path += l
-        matrix_table.to_csv (export_file_path+".csv", index = False, header=True)
+        matrix_table.to_csv(export_file_path+".csv", index = False, header=True)
         return
 
-def example1():
-    Tea = comp.Comparator()
-    Juice = Confusion("truth", "pred")
-    
-    a = {1: {1,2,3}, 2: {4,5,6}}    #example truth
-    b = {1: {1,2}, 2: {3,5,6,7}}      #example predicted
-    print("truth: \t\t{}\npredicted: \t{}\n".format(a, b))
-    
-    common_AB = Tea.common_tax_ID(a, b)
-    combined_AB = Tea.combine_tax_ID(a, b)
-    combined_AB_set = Juice.dictionary_to_set(combined_AB)
-    print("True Positives:", Juice.check_true_positives(a, b, common_AB, combined_AB))
-    print("False Negatives:", Juice.check_false_negatives(a, b, common_AB, combined_AB_set))
-    print("False Positives:", Juice.check_false_positives(a, b, combined_AB_set))
-    print("True Negatives:", Juice.check_true_negatives(a, b, combined_AB_set))
-    return
-
-def example2():
-    Tea = comp.Comparator()
-    Juice = Confusion("truth", "pred")
-    
-    a = {1: {1,2,3}, 2: {4,5,6}, 3 : {7,8,9}}    #example truth
-    b = {1: {1,2,8}, 2: {3,5,6,7}, 3: {9,10}}      #example predicted
-    print("truth: \t\t{}\npredicted: \t{}\n".format(a, b))
-    
-    common_AB = Tea.common_tax_ID(a, b)
-    combined_AB = Tea.combine_tax_ID(a, b)
-    
-    Juice.print_matrix_chart(Juice.confusion_matrix(a, b, common_AB, combined_AB))
-    return
-
-def example3():
-    Juice = Confusion("truth", "pred")
-    
-    m1 = Juice.main()
-    m2 = Juice.main()
-    
-    print("PREDICTED:\n")
-    Juice.print_matrix_chart(m1)
-    
-    print()
-    
-    print("Predicted:")
-    print(Juice.create_matrix_table(Juice.add_other_info(m1)))
-    print("\nTruth:")
-    print(Juice.create_matrix_table(Juice.add_other_info(m2)))
-    return
-
-def example4():
-    Juice = Confusion("truth", "pred")
-    
-    matrix = Juice.main()
-    matrix_plus = Juice.add_other_info(matrix)
-    reformated_matrix_plus = Juice.reformat_matrix(matrix_plus)
-    re_matrix_plus_table = Juice.create_matrix_table(reformated_matrix_plus)
-    
-    Juice.save_matrix_table(re_matrix_plus_table)
-    return
-
-def example5():
-    Juice2 = Confusion("A_1", "B_1")
-    j2_matrix = Juice2.main()
-    
-    over, under = Juice2.check_matrix_error(j2_matrix)
-    print(over[:10], "\n\n", under[:10])
-    return
 
 
 #%% MAIN

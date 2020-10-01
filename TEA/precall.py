@@ -11,6 +11,7 @@ Calculating precision and recall
 
 import pandas as pd
 import numpy as np
+from collections.abc import Iterable
 import re
 import TEA.confusion_matrix as cm
 from glob import glob
@@ -22,6 +23,10 @@ from scipy.spatial import distance
 from scipy.cluster.hierarchy import linkage, dendrogram, set_link_color_palette
 import matplotlib.pyplot as plt
 import matplotlib
+
+import seaborn as sns
+import sys
+
 
 
 #%% CLASS
@@ -82,17 +87,16 @@ class Misc():
         return
     
     # GETTERS
-    def get_matrx_dict(self):
+    def get_matrix_dict(self):
         return self.matrix_dict
     def get_matrix_tables(self):
         return self.matrix_tables
     def get_saved(self):
         return self.saved
     def get_matrix_names(self):
-        names_list = []
-        for m in self.matrix_dict:
-            names_list.append(m)
-        return names_list
+        return list(self.matrix_dict.keys())
+    def get_truth(self):
+        return self.cm_truth
     def get_input_path(self):
         return self.input_path
     def get_output_path(self):
@@ -337,9 +341,10 @@ class Misc():
         if csv.lower() == "yes":
             self.save_matrices_as_csv(self.output_path)
         
+        
         self.save_as_excel(self.output_path, excel_name)
         
-        
+        # Dendrograms
         sheets = ["True Positives", "False Negatives", "False Positives", "True Negatives"]
         for sheet in sheets:
             ranks = self.read_excel(sheet, os.path.join(self.output_path, excel_name + ".xlsx"))
@@ -392,7 +397,7 @@ class Misc():
             plt.suptitle(title, size=36, weight='semibold')
             den = dendrogram(link, orientation='right', labels=names)
             
-            plt.xlim(-0.1, 1.1)
+            plt.xlim(-0.05, 1.05)
             plt.xlabel("Bray Curtis Distance", fontsize=20, weight='semibold', labelpad=15)
             plt.ylabel("Tools", fontsize=20, weight='semibold', labelpad=30)
             plt.tick_params(labelsize=16, labelcolor='#00213E')
@@ -409,90 +414,95 @@ class Misc():
     
     def trace_back(self, metric):
         Chai = cm.comp.pp.Parser()
-        true_samples = Chai.main(os.path.join(self.input_path, self.cm_truth), 1)
+        true_samples = pd.DataFrame.from_dict(Chai.main(os.path.join(self.input_path, self.cm_truth), 1))
         preds = self.get_matrix_names()
         true_data = {}
         data = {}
         
         # to get true data
-        sample_sum = 0
-        for sample in true_samples:
-            sample_sum += 1
-            true_data[sample] = set()
-            for tax_id in true_samples[sample]:
-                parent_ids = re.split('\|', true_samples[sample][tax_id][2])
-                for parent in parent_ids:
-                    if parent.strip().isnumeric():
-                        #search later for line that was empty string
-                        true_data[sample].add(int(parent.strip()))
+        for col in true_samples.columns:
+            for ind in true_samples.index:
+                if col not in true_data:
+                    true_data[col] = set()
+                if isinstance(true_samples.loc[ind, col], Iterable):
+                    taxids = [tax for tax in re.split('\|', true_samples.loc[ind, col][-1]) if tax != '']
+                    true_data[col] = true_data[col] | set(taxids)
         
         # to get predicted data
         for name in preds:
             data[name] = {}
-            matrix = Chai.main(os.path.join(self.input_path, name), 1)
-            for sample in matrix:
-                data[name][sample] = set()
-                for tax_id in matrix[sample]:
-                    parent_ids = re.split('\|', matrix[sample][tax_id][2])
-                    for parent in parent_ids:
-                        if parent.strip().isnumeric():
-                            #search later for line that was empty string
-                            data[name][sample].add(int(parent.strip()))
+            matrix = pd.DataFrame.from_dict(Chai.main(os.path.join(self.input_path, name), 1))
+            for col in matrix.columns:
+                for ind in matrix.index:
+                    if col not in data[name]:
+                        data[name][col] = set()
+                    if isinstance(matrix.loc[ind, col], Iterable):
+                        taxids = [tax for tax in re.split('\|', matrix.loc[ind, col][-1]) if tax != '']
+                        data[name][col] = data[name][col] | set(taxids)
         
+        
+        # turn predicted data into confusion matrices
         Tea = cm.comp.Comparator()
         Juice = cm.Confusion('', '')
         new_matrix = {}
         for name in data:
             combined_taxid = Tea.combine_tax_ID(true_data, data[name])
             new_matrix[name] = Juice.confusion_matrix(true_data, data[name], combined_taxid)
+        matrix_df = pd.DataFrame.from_dict(new_matrix, orient='index')
         
-        # make a data from for the correct metric
+        # make a data frame for the correct metric
         df = pd.DataFrame()
         if metric == 'True Positives':
             TP = {}
-            for name in new_matrix:
-                for tax_id in new_matrix[name]:
+            for name in matrix_df.columns:
+                for tax_id in matrix_df.index:
                     if tax_id not in TP:
                         TP[tax_id] = {}
                     if name not in TP[tax_id]:
-                        TP[tax_id][name] = new_matrix[name][tax_id][0]
-            df = pd.DataFrame.from_dict(TP, orient='index')
+                        if isinstance(matrix_df.loc[tax_id, name], Iterable):
+                            TP[tax_id][name] = matrix_df.loc[tax_id, name][0]
+            df = pd.DataFrame.from_dict(TP)
         elif metric == 'False Negatives':
             FN = {}
-            for name in new_matrix:
-                for tax_id in new_matrix[name]:
+            for name in matrix_df.columns:
+                for tax_id in matrix_df.index:
                     if tax_id not in FN:
                         FN[tax_id] = {}
                     if name not in FN[tax_id]:
-                        FN[tax_id][name] = new_matrix[name][tax_id][1]
-            df = pd.DataFrame.from_dict(FN, orient='index')
+                        if isinstance(matrix_df.loc[tax_id, name], Iterable):
+                            FN[tax_id][name] = matrix_df.loc[tax_id, name][1]
+            df = pd.DataFrame.from_dict(FN)
         elif metric == 'False Positives':
             FP = {}
-            for name in new_matrix:
-                for tax_id in new_matrix[name]:
+            for name in matrix_df.columns:
+                for tax_id in matrix_df.index:
                     if tax_id not in FP:
                         FP[tax_id] = {}
                     if name not in FP[tax_id]:
-                        FP[tax_id][name] = new_matrix[name][tax_id][2]
-            df = pd.DataFrame.from_dict(FP, orient='index')
+                        if isinstance(matrix_df.loc[tax_id, name], Iterable):
+                            FP[tax_id][name] = matrix_df.loc[tax_id, name][2]
+            df = pd.DataFrame.from_dict(FP)
         elif metric == 'True Negatives':
             TN = {}
-            for name in new_matrix:
-                for tax_id in new_matrix[name]:
+            for name in matrix_df.columns:
+                for tax_id in matrix_df.index:
                     if tax_id not in TN:
                         TN[tax_id] = {}
                     if name not in TN[tax_id]:
-                        TN[tax_id][name] = new_matrix[name][tax_id][3]
-            df = pd.DataFrame.from_dict(TN, orient='index')
+                        if isinstance(matrix_df.loc[tax_id, name], Iterable):
+                            TN[tax_id][name] = matrix_df.loc[tax_id, name][3]
+            df = pd.DataFrame.from_dict(TN)
             
         
         return df.fillna(0)
     
-    def get_top_taxid(self, x, metric='precall', difficulty='easy', truth="no"):
+    def get_top_taxid(self, x, metric='tp', difficulty='easy', truth="yes"):
         excel_name =os.path.join(self.output_path, self.output_name) + '.xlsx'
         metric_df = pd.DataFrame()
         
         metric_df['Tax ID'] = pd.read_excel(excel_name, sheet_name='Precision')['Tax ID']
+        names = pd.read_excel(excel_name, sheet_name='True Positives')['name']
+        metric_df['Names'] = [re.split('\|', name).pop() for name in names]
         if metric.lower() == 'precall':
             metric_df['Pre-Agg'] = pd.read_excel(excel_name, sheet_name='Precision')['Aggregate']
             metric_df['Re-Agg'] = pd.read_excel(excel_name, sheet_name='Recall')['Aggregate']
@@ -532,9 +542,126 @@ class Misc():
             nan_pos = 'first'
         
         needed_df = metric_df.sort_values(by=base, ascending=order, na_position=nan_pos).iloc[0:x, :]
-        needed_df.to_excel(os.path.join(self.output_path, 'Top_'+difficulty+'_taxid.xlsx'))
-        print('\nSaved as {}'.format(os.path.join(self.output_path, 'Top_'+difficulty+'_taxid.xlsx')))
+        fn = 'Top_' + difficulty.capitalize() + '-' + metric.upper() + '_taxid.xlsx'
+        needed_df.to_excel(os.path.join(self.output_path, fn), index=False)
+        print('\nSaved as {}'.format(os.path.join(self.output_path, fn)))
         return
+    
+    def create_heat_map(self, file_name):
+        sys.setrecursionlimit(10000)
+        taxid_df = pd.read_excel(os.path.join(self.output_path, file_name))
+        taxids = [taxid for taxid in taxid_df['Tax ID']]
+        
+        df = pd.read_excel(os.path.join(self.output_path, self.output_name+'.xlsx'), sheet_name='True Positives')
+        
+        exclude = ['Tax ID', 'name', 'rank', 'Aggregate']
+        tool_names = [tool.replace('.profile', '') for tool in df.columns if tool not in exclude]
+        '''
+        tool_names = ["adoring_euclid_5.profile",
+                      "angry_brattain_0.profile",
+                      "distracted_jones_0.profile",
+                      "ecstatic_nobel_0.profile",
+                      "ecstatic_nobel_1.profile",
+                      "ecstatic_nobel_2.profile",
+                      "ecstatic_nobel_3.profile",
+                      "ecstatic_nobel_4.profile",
+                      "ecstatic_nobel_5.profile",
+                      "ecstatic_nobel_6.profile",
+                      "ecstatic_nobel_7.profile",
+                      "ecstatic_nobel_8.profile",
+                      "ecstatic_nobel_9.profile",
+                      #"gs.profile",
+                      "real_gnd_truth.profile",
+                      "insane_turing_0.profile",
+                      "mad_yalow_0.profile",
+                      "modest_yalow_0.profile",
+                      "stoic_mclean_0.profile"
+                      ]
+        '''
+        
+        df_sub = pd.DataFrame()
+        for taxid in taxids:
+            df_sub = df_sub.append(df[df['Tax ID'] == taxid])
+        df_sub = df_sub.drop(labels=['Tax ID', 'name', 'rank', 'Aggregate'], axis=1)
+        
+        df2 = df_sub[(df_sub.select_dtypes(include=['number']) != 0).any(1)]
+        
+        
+        palette = sns.husl_palette(8, s=.45)
+        luminosity = dict(zip(map(str, tool_names), palette))
+        
+        # Convert the palette to vectors that will be drawn on the side of the matrix
+        column_vals = df2.columns.get_level_values(0)
+        colors = pd.Series(column_vals, index=df2.columns).map(luminosity)
+        
+        # Draw the full plot
+        g = sns.clustermap(df2/df2.max().max(),
+                           #center=0,
+                           cmap="vlag",
+                           row_colors=colors, col_colors=colors,
+                           dendrogram_ratio=(.1, .2),
+                           cbar_pos=(.02, .32, .03, .2),
+                           linewidths=.75,
+                           #linewidths=.001,
+                           figsize=(12, 13)
+                           )
+        
+        g.ax_row_dendrogram.remove()
+        
+        hm_name = os.path.join(self.output_path, file_name.replace('.xlsx', '_Heat_map'))
+        plt.suptitle(file_name.replace('.xlsx', ' Heat Map').replace('_', ' '), size=36, weight='semibold')
+        plt.savefig(hm_name+'.png', dpi=480, facecolor='#FFFFFF')
+        print('Saved as {}'.format(hm_name))
+        return
+    
+    def koslicki(self):
+        sys.setrecursionlimit(10000)
+        
+        df = pd.read_excel(os.path.join(self.output_path, self.output_name+'.xlsx'), sheet_name="True Positives")
+        
+        tool_names = ["adoring_euclid_5.profile",
+                      "angry_brattain_0.profile",
+                      "distracted_jones_0.profile",
+                      "ecstatic_nobel_0.profile",
+                      #"ecstatic_nobel_1.profile",
+                      "ecstatic_nobel_2.profile",
+                      #"ecstatic_nobel_3.profile",
+                      #"ecstatic_nobel_4.profile",
+                      #"ecstatic_nobel_5.profile",
+                      #"ecstatic_nobel_6.profile",
+                      #"ecstatic_nobel_7.profile",
+                      #"ecstatic_nobel_8.profile",
+                      #"ecstatic_nobel_9.profile",
+                      #"gs.profile",
+                      "real_gnd_truth.profile",
+                      "insane_turing_0.profile",
+                      "mad_yalow_0.profile",
+                      "modest_yalow_0.profile",
+                      "stoic_mclean_0.profile"
+                      ]
+
+        rank = "phylum"
+        df_sub = df[tool_names][df["rank"] == rank]
+        df2 = df_sub[(df_sub.select_dtypes(include=['number']) != 0).any(1)]
+        palette = sns.husl_palette(8, s=.45)
+        luminosity = dict(zip(map(str, tool_names), palette))
+        # Convert the palette to vectors that will be drawn on the side of the matrix
+        column_vals = df2.columns.get_level_values(0)
+        colors = pd.Series(column_vals, index=df2.columns).map(luminosity)
+        # Draw the full plot
+        g = sns.clustermap(df2/df2.max().max(),
+                           #center=0,
+                           cmap="vlag",
+                           row_colors=colors, col_colors=colors,
+                           dendrogram_ratio=(.1, .2),
+                           cbar_pos=(.02, .32, .03, .2),
+                           linewidths=.75,
+                           #linewidths=.001,
+                           figsize=(12, 13)
+                           )
+        g.ax_row_dendrogram.remove()
+        return
+
 
 
 #%% MAIN
@@ -543,6 +670,6 @@ if __name__ == "__main__":
     '''
     Choco = Misc()
     
-    Choco.main(["truth", "pred", "pred2", "pred3"], "C:\\Users\\milkg\\Documents\\", "Derp_Test", "yes")
+    Choco.main(["truth", "pred", "pred2", "pred3"], "C:\\Users\\milkg\\Documents\\", Test_Test", "yes")
     '''
     
