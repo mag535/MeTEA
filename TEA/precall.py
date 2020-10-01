@@ -608,7 +608,7 @@ class Misc():
         
         g.ax_row_dendrogram.remove()
         
-        hm_name = os.path.join(self.output_path, file_name.replace('.xlsx', '_Heat_map'))
+        hm_name = os.path.join(self.output_path, re.sub('\..*', '_Heat_Map.png', file_name))
         plt.suptitle(file_name.replace('.xlsx', ' Heat Map').replace('_', ' '), size=36, weight='semibold')
         plt.savefig(hm_name+'.png', dpi=480, facecolor='#FFFFFF')
         print('Saved as {}'.format(hm_name))
