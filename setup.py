@@ -9,7 +9,6 @@ setup(name="TEA-NuMosaic",
         version="0.0.1",
         author="Melissa Gray",
         author_email="mag535@drexel.edu",
-        license="GNU General Public License v3",
         description="A package to parse, organize, calculate, and save data from metagenomic profile files",
         long_description=readme,
         long_description_content_type="text/markdown",
@@ -17,9 +16,9 @@ setup(name="TEA-NuMosaic",
         packages=find_packages(),
         classifiers=[
             "Operating System :: OS Independent",
-            "Intended Audience :: Science/Data Analysis",
+            "Intended Audience :: Science/Research",
             "Programming Language :: Python :: 3",
             "Programming Language :: Python :: 3.6",
             "Programming Language :: Python :: 3.7",
-            "License :: OSI Approved :: GNU General Public License v3"]
+            "License :: OSI Approved :: GNU General Public License v3 (GPLv3)"]
         )
