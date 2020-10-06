@@ -15,11 +15,11 @@ setup(name="TEA-NuMosaic",
         url="https://github.com/mag535/TEA/",
         packages=find_packages(),
         classifiers=[
-            "Development Status :: 4 - Beta"
-            "Operating System :: Windows 10 / MacOS / Linux"
-            "Intended Audience :: Science / Data Analysis"
-            "Programming Language :: Python :: 3"
-            "Programming Language :: Python :: 3.6"
+            "Development Status :: 4 - Beta",
+            "Operating System :: Windows 10 / MacOS / Linux",
+            "Intended Audience :: Science / Data Analysis",
+            "Programming Language :: Python :: 3",
+            "Programming Language :: Python :: 3.6",
             "Programming Language :: Python :: 3.7",
             "License :: OSI Approves :: GNU General Public License v3"]
         )
