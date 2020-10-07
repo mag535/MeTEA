@@ -1,5 +1,5 @@
 # MeTEA
-*(Taxa Evaluation and Assessment) Parse, organize, calculate and save data from metagenomic profile files.*
+*(Metagenomic Taxa Evaluation and Assessment) Parse, organize, calculate and save data from metagenomic profile files.*
 
   This package reads the data from profile files (with the '.profile' extension), calculates each Tax ID's confusion matrix for each tool, creates dendrograms based on taxa levels and confusion matrix metrics, then saves the confusion matrix data as an excel file and the dendrograms as png files.
 
