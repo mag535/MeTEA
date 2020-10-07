@@ -13,7 +13,7 @@ import pandas as pd
 import numpy as np
 from collections.abc import Iterable
 import re
-import TEA.confusion_matrix as cm
+import MeTEA.confusion_matrix as cm
 from glob import glob
 from openpyxl import load_workbook
 from openpyxl.styles import Font, Alignment

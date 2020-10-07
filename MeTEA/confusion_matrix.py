@@ -10,7 +10,7 @@ Created on Thu Aug 13 15:26:55 2020
 import numpy as np
 import pandas as pd
 import re
-import TEA.comparator as comp
+import MeTEA.comparator as comp
 
 '''
  matrix -> Tax_ID: [ TP | FN | FP | TN]
