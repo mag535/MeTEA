@@ -6,7 +6,7 @@ with open("README.md", "r", encoding="utf-8") as readme_file:
     readme = readme_file.read()
 
 setup(name="MeTEA",
-        version="0.0.1",
+        version="0.0.2",
         author="Melissa Gray",
         author_email="mag535@drexel.edu",
         description="A package to parse, organize, calculate, and save data from metagenomic profile files",
