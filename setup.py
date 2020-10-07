@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 with open("README.md", "r", encoding="utf-8") as readme_file:
     readme = readme_file.read()
 
-setup(name="TEA",
+setup(name="meTEA",
         version="0.0.1",
         author="Melissa Gray",
         author_email="mag535@drexel.edu",
