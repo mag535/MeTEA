@@ -7,25 +7,26 @@ Created on Thu Aug 20 12:35:46 2020
 Calculating precision and recall
 """
 
-#%% VARIABLES 7 IMPORTS
+#%% VARIABLES & IMPORTS
 
-import pandas as pd
-import numpy as np
-from collections.abc import Iterable
-import re
 import MeTEA.confusion_matrix as cm
-from glob import glob
+
+import numpy as np
+import pandas as pd
 from openpyxl import load_workbook
 from openpyxl.styles import Font, Alignment
+
+from collections.abc import Iterable
+import re
+from glob import glob
 import os.path
+import sys
 
 from scipy.spatial import distance
 from scipy.cluster.hierarchy import linkage, dendrogram, set_link_color_palette
 import matplotlib.pyplot as plt
 import matplotlib
-
 import seaborn as sns
-import sys
 
 
 
@@ -347,7 +348,7 @@ class Misc():
         # Dendrograms
         sheets = ["True Positives", "False Negatives", "False Positives", "True Negatives"]
         for sheet in sheets:
-            ranks = self.read_excel(sheet, os.path.join(self.output_path, excel_name + ".xlsx"))
+            ranks = self.read_excel(sheet, os.path.join(self.output_path, excel_name + ".xlsx"), engine='openpyxl')
             ranks.append("")
             for rank in ranks:
                 self.create_dendrogram(sheet, rank, os.path.join(self.output_path, excel_name + ".xlsx"))
@@ -357,7 +358,7 @@ class Misc():
     
     def read_excel(self,sheet, excel_path):
         ranks = []
-        excel_df = pd.read_excel(excel_path, sheet_name=sheet)
+        excel_df = pd.read_excel(excel_path, sheet_name=sheet, engine='openpyxl')
         for rank in excel_df.loc[:, 'rank']:
             if rank not in ranks:
                 ranks.append(rank)
@@ -369,7 +370,7 @@ class Misc():
             # make dendrogram over all ranks
             tmp_df = self.trace_back(metric)
         else:
-            df = pd.read_excel(excel_path, sheet_name=metric)
+            df = pd.read_excel(excel_path, sheet_name=metric, engine='openpyxl')
             tmp_df = df[df['rank'] == rank]
             
         to_remove = ['Tax ID', 'rank', 'name', 'Aggregate']
@@ -500,26 +501,26 @@ class Misc():
         excel_name =os.path.join(self.output_path, self.output_name) + '.xlsx'
         metric_df = pd.DataFrame()
         
-        metric_df['Tax ID'] = pd.read_excel(excel_name, sheet_name='Precision')['Tax ID']
-        names = pd.read_excel(excel_name, sheet_name='True Positives')['name']
+        metric_df['Tax ID'] = pd.read_excel(excel_name, sheet_name='Precision', engine='openpyxl')['Tax ID']
+        names = pd.read_excel(excel_name, sheet_name='True Positives', engine='openpyxl')['name']
         metric_df['Names'] = [re.split('\|', name).pop() for name in names]
         if metric.lower() == 'precall':
-            metric_df['Pre-Agg'] = pd.read_excel(excel_name, sheet_name='Precision')['Aggregate']
-            metric_df['Re-Agg'] = pd.read_excel(excel_name, sheet_name='Recall')['Aggregate']
+            metric_df['Pre-Agg'] = pd.read_excel(excel_name, sheet_name='Precision', engine='openpyxl')['Aggregate']
+            metric_df['Re-Agg'] = pd.read_excel(excel_name, sheet_name='Recall', engine='openpyxl')['Aggregate']
             metric_df['Average'] = (metric_df['Pre-Agg'] + metric_df['Re-Agg']) / 2
             base = 'Average'
         elif metric.lower() == 'tp':
             base = 'TP-Agg'
-            metric_df[base] = pd.read_excel(excel_name, sheet_name='True Positives')['Aggregate']
+            metric_df[base] = pd.read_excel(excel_name, sheet_name='True Positives', engine='openpyxl')['Aggregate']
         elif metric.lower() == 'fn':
             base = 'FN-Agg'
-            metric_df[base] = pd.read_excel(excel_name, sheet_name='False Negatives')['Aggregate']
+            metric_df[base] = pd.read_excel(excel_name, sheet_name='False Negatives', engine='openpyxl')['Aggregate']
         elif metric.lower() == 'fp':
             base = 'FP-Agg'
-            metric_df[base] = pd.read_excel(excel_name, sheet_name='False Positives')['Aggregate']
+            metric_df[base] = pd.read_excel(excel_name, sheet_name='False Positives', engine='openpyxl')['Aggregate']
         elif metric.lower() == 'tn':
             base = 'TN-Agg'
-            metric_df[base] = pd.read_excel(excel_name, sheet_name='True Negatives')['Aggregate']
+            metric_df[base] = pd.read_excel(excel_name, sheet_name='True Negatives', engine='openpyxl')['Aggregate']
         
         if truth.lower() == 'yes':
             Juice = cm.Confusion(self.cm_truth, '')
@@ -549,10 +550,10 @@ class Misc():
     
     def create_heat_map(self, file_name):
         sys.setrecursionlimit(10000)
-        taxid_df = pd.read_excel(os.path.join(self.output_path, file_name))
+        taxid_df = pd.read_excel(os.path.join(self.output_path, file_name), engine='openpyxl')
         taxids = [taxid for taxid in taxid_df['Tax ID']]
         
-        df = pd.read_excel(os.path.join(self.output_path, self.output_name+'.xlsx'), sheet_name='True Positives')
+        df = pd.read_excel(os.path.join(self.output_path, self.output_name+'.xlsx'), sheet_name='True Positives', engine='openpyxl')
         
         exclude = ['Tax ID', 'name', 'rank', 'Aggregate']
         tool_names = [tool.replace('.profile', '') for tool in df.columns if tool not in exclude]
@@ -617,7 +618,7 @@ class Misc():
     def koslicki(self):
         sys.setrecursionlimit(10000)
         
-        df = pd.read_excel(os.path.join(self.output_path, self.output_name+'.xlsx'), sheet_name="True Positives")
+        df = pd.read_excel(os.path.join(self.output_path, self.output_name+'.xlsx'), sheet_name="True Positives", engine='openpyxl')
         
         tool_names = ["adoring_euclid_5.profile",
                       "angry_brattain_0.profile",
