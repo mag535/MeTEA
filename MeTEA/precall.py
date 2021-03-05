@@ -51,10 +51,7 @@ class Precall():
             recall = (tp) / (tp+fn)
         return recall
     
-    def calculate_precision_and_recall(self, matrices):   # [TP, FN, FP, TN]
-        tax_id_precision = {}
-        tax_id_recall = {}
-        
+    def calculate_precision_and_recall(self, matrices, tax_id_precision, tax_id_recall):   # [TP, FN, FP, TN]
         for name in matrices:
             for tax_id in matrices[name]:
                 if (tax_id not in tax_id_precision):
@@ -164,6 +161,8 @@ class Misc():
         fn = {}
         fp = {}
         tn = {}
+        p = {}
+        r = {}
         skipped_tax_id = []
         
         for sample_num in truth_other:
@@ -182,6 +181,12 @@ class Misc():
                         tn[tax_id] = {}
                         tn[tax_id]["rank"] = truth_other[sample_num][tax_id][0]
                         tn[tax_id]["name"] = truth_other[sample_num][tax_id][1]
+                        p[tax_id] = {}
+                        p[tax_id]["rank"] = truth_other[sample_num][tax_id][0]
+                        p[tax_id]["name"] = truth_other[sample_num][tax_id][1]
+                        r[tax_id] = {}
+                        r[tax_id]["rank"] = truth_other[sample_num][tax_id][0]
+                        r[tax_id]["name"] = truth_other[sample_num][tax_id][1]
                         
                         self.true_taxid.append(tax_id)
                     else:
@@ -205,7 +210,13 @@ class Misc():
                             tn[tax_id] = {}
                             tn[tax_id]["rank"] = temp_other[sample_num][tax_id][0]
                             tn[tax_id]["name"] = temp_other[sample_num][tax_id][1]
-        return tp, fn, fp, tn
+                            p[tax_id] = {}
+                            p[tax_id]["rank"] = temp_other[sample_num][tax_id][0]
+                            p[tax_id]["name"] = temp_other[sample_num][tax_id][1]
+                            r[tax_id] = {}
+                            r[tax_id]["rank"] = temp_other[sample_num][tax_id][0]
+                            r[tax_id]["name"] = temp_other[sample_num][tax_id][1]
+        return tp, fn, fp, tn, p, r
     
     def _get_true_positives(self, TP):
         for m in self.matrix_dict:
@@ -214,6 +225,7 @@ class Misc():
                     TP[tax_id] = {}
                 TP[tax_id][m] = self.matrix_dict[m][tax_id][0]
         return TP
+    
     def _get_false_negatives(self, FN):
         for m in self.matrix_dict:
             for tax_id in self.matrix_dict[m]:
@@ -221,6 +233,7 @@ class Misc():
                     FN[tax_id] = {}
                 FN[tax_id][m] = self.matrix_dict[m][tax_id][1]
         return FN
+    
     def _get_false_positives(self, FP):
         for m in self.matrix_dict:
             for tax_id in self.matrix_dict[m]:
@@ -228,6 +241,7 @@ class Misc():
                     FP[tax_id] = {}
                 FP[tax_id][m] = self.matrix_dict[m][tax_id][2]
         return FP
+    
     def _get_true_negatives(self, TN):
         for m in self.matrix_dict:
             for tax_id in self.matrix_dict[m]:
@@ -238,7 +252,7 @@ class Misc():
     
     def _organize_matrix(self):
         Juice = cm.Confusion(os.path.join(self.input_path, self.cm_truth), "")
-        tp, fn, fp, tn = self._get_name_and_rank()
+        tp, fn, fp, tn, p, r = self._get_name_and_rank()
         
         names = self.get_matrix_names()
         TP = self._get_true_positives(tp)
@@ -260,12 +274,12 @@ class Misc():
                     FN[tax_id][name] = 0
                 if name not in FP[tax_id]:
                     FP[tax_id][name] = 0
-        return TP, FN, FP, TN
+        return TP, FN, FP, TN, p, r
     
     def organize_matrix(self):
         Calc = Precall()
-        tp, fn, fp, tn = self._organize_matrix()
-        precision, recall = Calc.calculate_precision_and_recall(self.matrix_dict)
+        tp, fn, fp, tn, p, r = self._organize_matrix()
+        precision, recall = Calc.calculate_precision_and_recall(self.matrix_dict, p, r)
         
         #### Creating DataFrames
         tp_df = pd.DataFrame.from_dict(tp, orient='index')
@@ -307,6 +321,7 @@ class Misc():
         workbook.save(path)
         print("\nSaved as \'{}\'".format(path))
         return
+    
     def save_as_excel(self, file_path, file_name):
         tp, fn, fp, tn, precision, recall = self.organize_matrix()
         
@@ -346,9 +361,9 @@ class Misc():
         self.save_as_excel(self.output_path, excel_name)
         
         # Dendrograms
-        sheets = ["True Positives", "False Negatives", "False Positives", "True Negatives"]
+        sheets = ["True Positives", "False Negatives" ,"False Positives", "True Negatives", "Precall"]
         for sheet in sheets:
-            ranks = self.read_excel(sheet, os.path.join(self.output_path, excel_name + ".xlsx"), engine='openpyxl')
+            ranks = self.read_excel(sheet, os.path.join(self.output_path, excel_name + ".xlsx"))
             ranks.append("")
             for rank in ranks:
                 self.create_dendrogram(sheet, rank, os.path.join(self.output_path, excel_name + ".xlsx"))
@@ -356,8 +371,10 @@ class Misc():
         
         return
     
-    def read_excel(self,sheet, excel_path):
+    def read_excel(self, sheet, excel_path):
         ranks = []
+        if sheet == "Precall":
+            sheet = "Precision"
         excel_df = pd.read_excel(excel_path, sheet_name=sheet, engine='openpyxl')
         for rank in excel_df.loc[:, 'rank']:
             if rank not in ranks:
@@ -365,14 +382,22 @@ class Misc():
         return ranks
     
     def create_dendrogram(self, metric, rank, excel_path):
-        
-        if rank == '':
-            # make dendrogram over all ranks
-            tmp_df = self.trace_back(metric)
+        if metric == "Precall":
+            precision_df = pd.read_excel(excel_path, sheet_name="Precision", engine='openpyxl').fillna(1)
+            recall_df = pd.read_excel(excel_path, sheet_name="Recall", engine='openpyxl').fillna(1)
+            # calculate harmonic mean = (2*p*r) / (p+r)
+            p_df = precision_df.iloc[:, 3:]
+            r_df = recall_df.iloc[:, 3:]
+            harmonic_mean_df = (p_df.mul(r_df) * 2).div(p_df.add(r_df)).fillna(0)
+            df = pd.concat([precision_df.iloc[:, :3], harmonic_mean_df], axis=1)
         else:
             df = pd.read_excel(excel_path, sheet_name=metric, engine='openpyxl')
+        
+        if rank == '':
+            tmp_df = df
+        else:
             tmp_df = df[df['rank'] == rank]
-            
+        
         to_remove = ['Tax ID', 'rank', 'name', 'Aggregate']
         cols = [col for col in tmp_df.columns if col not in to_remove]
         
@@ -389,12 +414,11 @@ class Misc():
         if len(tool_array) > 1:
             matplotlib.rcParams['lines.linewidth'] = 3
             bray_curt = distance.pdist(np.array(tool_array), 'braycurtis')
-            
             link = linkage(bray_curt, 'average')
             set_link_color_palette(['y', 'c', 'g', 'm', 'r'])
             
             plt.figure(figsize=[20.4, 10.4],dpi=480)
-            title = metric + ": " + rank + "-Dendrogram"
+            title = metric + ": " + rank.capitalize() + "-Dendrogram"
             plt.suptitle(title, size=36, weight='semibold')
             den = dendrogram(link, orientation='right', labels=names)
             
@@ -462,7 +486,7 @@ class Misc():
                     if name not in TP[tax_id]:
                         if isinstance(matrix_df.loc[tax_id, name], Iterable):
                             TP[tax_id][name] = matrix_df.loc[tax_id, name][0]
-            df = pd.DataFrame.from_dict(TP)
+            df = pd.DataFrame.from_dict(TP).fillna(0)
         elif metric == 'False Negatives':
             FN = {}
             for name in matrix_df.columns:
@@ -472,7 +496,7 @@ class Misc():
                     if name not in FN[tax_id]:
                         if isinstance(matrix_df.loc[tax_id, name], Iterable):
                             FN[tax_id][name] = matrix_df.loc[tax_id, name][1]
-            df = pd.DataFrame.from_dict(FN)
+            df = pd.DataFrame.from_dict(FN).fillna(0)
         elif metric == 'False Positives':
             FP = {}
             for name in matrix_df.columns:
@@ -482,7 +506,7 @@ class Misc():
                     if name not in FP[tax_id]:
                         if isinstance(matrix_df.loc[tax_id, name], Iterable):
                             FP[tax_id][name] = matrix_df.loc[tax_id, name][2]
-            df = pd.DataFrame.from_dict(FP)
+            df = pd.DataFrame.from_dict(FP).fillna(0)
         elif metric == 'True Negatives':
             TN = {}
             for name in matrix_df.columns:
@@ -492,10 +516,40 @@ class Misc():
                     if name not in TN[tax_id]:
                         if isinstance(matrix_df.loc[tax_id, name], Iterable):
                             TN[tax_id][name] = matrix_df.loc[tax_id, name][3]
-            df = pd.DataFrame.from_dict(TN)
+            df = pd.DataFrame.from_dict(TN).fillna(0)
+        elif metric == 'Precision': # TP / (TP + FP)
+            P = {}
+            for name in matrix_df.columns:
+                for tax_id in matrix_df.index:
+                    if tax_id not in P:
+                        P[tax_id] = {}
+                    if name not in P[tax_id]:
+                        if isinstance(matrix_df.loc[tax_id, name], Iterable):
+                            tp = matrix_df.loc[tax_id, name][0]
+                            fp = matrix_df.loc[tax_id, name][2]
+                            if (tp == 0) and (fp == 0):
+                                P[tax_id][name] = np.nan
+                            else:
+                                P[tax_id][name] = (tp) / (tp + fp)
+            df = pd.DataFrame.from_dict(P)
+        elif metric == 'Recall': # TP / (TP + FN)
+            R = {}
+            for name in matrix_df.columns:
+                for tax_id in matrix_df.index:
+                    if tax_id not in R:
+                        R[tax_id] = {}
+                    if name not in R[tax_id]:
+                        if isinstance(matrix_df.loc[tax_id, name], Iterable):
+                            tp = matrix_df.loc[tax_id, name][0]
+                            fn = matrix_df.loc[tax_id, name][1]
+                            if (tp == 0) and (fn == 0):
+                                R[tax_id][name] = np.nan
+                            else:
+                                R[tax_id][name] = (tp) / (tp + fn)
+            df = pd.DataFrame.from_dict(R)
             
         
-        return df.fillna(0)
+        return df
     
     def get_top_taxid(self, x, metric='tp', difficulty='easy', truth="yes"):
         excel_name =os.path.join(self.output_path, self.output_name) + '.xlsx'
