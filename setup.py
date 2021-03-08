@@ -5,6 +5,8 @@ from setuptools import setup, find_packages
 with open("README.md", "r", encoding="utf-8") as readme_file:
     readme = readme_file.read()
 
+requirements = ["numpy>=1", "pandas>=1", "openpyxl>=3"]
+
 setup(name="MeTEA",
         version="0.0.3",
         author="Melissa Gray",
@@ -14,6 +16,7 @@ setup(name="MeTEA",
         long_description_content_type="text/markdown",
         url="https://github.com/mag535/MeTEA/",
         packages=find_packages(),
+		install_requirements=requirements,
         classifiers=[
             "Operating System :: OS Independent",
             "Intended Audience :: Science/Research",
