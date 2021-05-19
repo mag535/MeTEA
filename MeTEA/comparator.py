@@ -154,8 +154,11 @@ class Comparator():
         combined_tax_IDs = {}
     
         for n in tax_id_1:
-            combined_tax_IDs[n] = self._combine_tax_ID(tax_id_1[n], tax_id_2[n])
-        #print("done listing")
+            try:
+                combined_tax_IDs[n] = self._combine_tax_ID(tax_id_1[n], tax_id_2[n])
+            except KeyError:
+                combined_tax_IDs[n] = self._combine_tax_ID(tax_id_1[n], tax_id_1[n])
+        # print("done listing")
         return combined_tax_IDs
 
     def main(self, files, t=0):
