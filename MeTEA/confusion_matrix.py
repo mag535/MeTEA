@@ -257,8 +257,11 @@ class Confusion():
         true_negative = 0
     
         for sample_num in truth:
-            if (tax_id not in truth[sample_num]) and (tax_id not in predicted[sample_num]):
-                true_negative += 1
+            try:
+                if (tax_id not in truth[sample_num]) and (tax_id not in predicted[sample_num]):
+                    true_negative += 1
+            except KeyError:
+                continue
         return true_negative
 
     def check_true_negatives(self, truth, predicted, combined_set):
