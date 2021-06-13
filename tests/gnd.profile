@@ -16,3 +16,12 @@
 1       rank1   1       bac     100
 3       rank2   1|3     bac|bac1        55
 4       rank2   1|4     bac|bac2        45
+
+#CAMI Submission for Taxonomic Profiling
+@Version:0.9.1
+@SampleID:test_sample_12
+@Ranks:rank1|rank2
+@@TAXID RANK    TAXPATH TAXPATHSN       PERCENTAGE
+1       rank1   1       bac     100
+3       rank2   1|3     bac|bac1        50
+4       rank2   1|4     bac|bac2        50
