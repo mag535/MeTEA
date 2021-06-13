@@ -408,7 +408,7 @@ class Misc():
             if np.sum(res) == 0:
                 continue
             tool_array.append(res.tolist())
-            names.append(item.split('.')[0])
+            names.append(os.path.splitext(os.path.basename(item))[0])
         tool_array = np.array(tool_array)
         
         if len(tool_array) > 1:

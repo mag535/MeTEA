@@ -9,6 +9,9 @@ Created on Tue Aug 11 09:38:24 2020
 
 import MeTEA.profile_parser as pp
 
+
+#%% NOTES
+
 # samples [sample #] [rank] [taxid] --->> Abundance
 '''
 Data Tree:
@@ -164,10 +167,13 @@ class Comparator():
 
         Parameters
         ----------
-        file1 : string
-            the profile file name before ".profile"
-        file2 : string
-            the profile file name before ".profile"
+        files : string
+            two names of the profile files without the ".profile" extension and
+            separated by a space (ie. "A_1 C_1")
+        
+        t (optional) : integer
+            passed into the main() function in profile_parser.py
+            Deafault: 0
 
         Returns
         -------

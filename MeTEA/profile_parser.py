@@ -38,7 +38,7 @@ class Parser():
         Parameters
         ----------
         f : string
-            first part of the profile file name (don't include the ".profile" part)
+            the profile file name
         
         Returns
         -------
@@ -88,11 +88,13 @@ class Parser():
 
         Returns
         -------
-        int
+        sample_number : int
             the sample number in each part
 
         '''
-        return int(part[0][-1])
+        sample_ID = part[0].split("_")  # splits the sample ID by "_"
+        sample_number = int(sample_ID[-1]) # takes the last element in the split sample ID (the sample number)
+        return sample_number
 
     def _turn_into_number(self, abun):
         '''
@@ -263,8 +265,7 @@ class Parser():
         Parameters
         ----------
         f : string
-            first part of the profile file name (don't include the ".profile" part, 
-                                             ie. "A_1" or "C_3")
+            the profile file name, ie. "A_1.profile" or "C_3.profile")
         t : integer, optional
             to toggle the type of parsing. 0 (default) and 1 are the options
 
@@ -317,14 +318,8 @@ class Parser():
 if __name__ == "__main__":
     '''
     Chai = Parser()
-    f = input("Which file: \n")
+    f = input("Which file: \n")     # in the format 'name.profile'
     Samples = Chai.main(f)
     Chai.print_sample(Samples)
-    '''
-    
-    '''
-    Chai = Parser()
-    print(Chai.main("pred.profile", 0))
-    print(Chai.main("pred.profile", 1))
     '''
     
