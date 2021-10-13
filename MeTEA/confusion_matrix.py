@@ -59,7 +59,7 @@ class Confusion():
         Returns
         -------
         dict_set : set
-            of all the tax_IDs in d (repeats not included)
+            contains all the tax_IDs in d (repeats not included)
 
         '''
         dict_set = set()

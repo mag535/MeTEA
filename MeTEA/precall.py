@@ -283,17 +283,24 @@ class Misc():
         
         #### Creating DataFrames
         tp_df = pd.DataFrame.from_dict(tp, orient='index')
-        fn_df = pd.DataFrame.from_dict(fn, orient="index")
-        fp_df = pd.DataFrame.from_dict(fp, orient="index")
-        tn_df = pd.DataFrame.from_dict(tn, orient="index")
+        fn_df = pd.DataFrame.from_dict(fn, orient='index')
+        fp_df = pd.DataFrame.from_dict(fp, orient='index')
+        tn_df = pd.DataFrame.from_dict(tn, orient='index')
         precision_df = pd.DataFrame.from_dict(precision, orient='index')
-        recall_df = pd.DataFrame.from_dict(recall, orient="index")
+        recall_df = pd.DataFrame.from_dict(recall, orient='index')
         
         ### Creating 'Aggregate' column
-        tp_df['Aggregate'] = tp_df.sum(axis=1)
-        fn_df['Aggregate'] = fn_df.sum(axis=1)
-        fp_df['Aggregate'] = fp_df.sum(axis=1)
-        tn_df['Aggregate'] = tn_df.sum(axis=1)
+        start = 2 # start after "name" column
+        
+        """
+        since "Tax ID" in the excel file isn't actually a column in the 
+        DataFrame and "Aggregate" hasn't been appended yet, the tool columns 
+        start at index 2 and goes all the way to the end.
+        """
+        tp_df['Aggregate'] = tp_df.iloc[:, start:].sum(axis=1)
+        fn_df['Aggregate'] = fn_df.iloc[:, start:].sum(axis=1)
+        fp_df['Aggregate'] = fp_df.iloc[:, start:].sum(axis=1)
+        tn_df['Aggregate'] = tn_df.iloc[:, start:].sum(axis=1)
         precision_df['Aggregate'] = tp_df['Aggregate'] / (tp_df['Aggregate'] + fp_df['Aggregate']) # TP / (TP+FP)
         recall_df['Aggregate'] = tp_df['Aggregate'] / (tp_df['Aggregate'] + fn_df['Aggregate']) # TP / (TP+FN)
         
@@ -339,7 +346,7 @@ class Misc():
         return
     
     
-    def main(self, gnd_truth, excel_name="TaxaPerformanceMetrics_byTool", gen_dir="", file_path="", csv="no"):
+    def main(self, gnd_truth, excel_name="TaxaPerformanceMetrics_byTool", gen_dir="", file_path="", csv=0, dendros=0):
         gen_paths = glob(os.path.join(gen_dir, "*.profile"))
         self.input_path = gen_dir
         self.output_path = file_path
@@ -350,24 +357,25 @@ class Misc():
         
         for path in gen_paths:
             name = os.path.basename(path)
-            if (name != gnd_truth) and (name not in self.matrix_dict):
+            if name not in self.matrix_dict:
                 Juice.set_file_name(path)
                 self.add_matrix(name, Juice.main("no"))
         
-        if csv.lower() == "yes":
+        if csv == 1:
             self.save_matrices_as_csv(self.output_path)
         
         
         self.save_as_excel(self.output_path, excel_name)
         
         # Dendrograms
-        sheets = ["True Positives", "False Negatives" ,"False Positives", "True Negatives", "Precall"]
-        for sheet in sheets:
-            ranks = self.read_excel(sheet, os.path.join(self.output_path, excel_name + ".xlsx"))
-            ranks.append("")
-            for rank in ranks:
-                self.create_dendrogram(sheet, rank, os.path.join(self.output_path, excel_name + ".xlsx"))
-        print("\nThe Dendrograms have been saved in {}.".format(self.output_path))
+        if dendros == 1:
+            sheets = ["True Positives", "False Negatives" ,"False Positives", "True Negatives", "Precall"]
+            for sheet in sheets:
+                ranks = self.read_excel(sheet, os.path.join(self.output_path, excel_name + ".xlsx"))
+                ranks.append("")
+                for rank in ranks:
+                    self.create_dendrogram(sheet, rank, os.path.join(self.output_path, excel_name + ".xlsx"))
+            print("\nThe Dendrograms have been saved in {}.".format(self.output_path))
         
         return
     
@@ -551,8 +559,8 @@ class Misc():
         
         return df
     
-    def get_top_taxid(self, x, metric='tp', difficulty='easy', truth="yes"):
-        excel_name =os.path.join(self.output_path, self.output_name) + '.xlsx'
+    def get_top_taxid(self, x, metric='tp', difficulty='least'):
+        excel_name = os.path.join(self.output_path, self.output_name) + '.xlsx'
         metric_df = pd.DataFrame()
         
         metric_df['Tax ID'] = pd.read_excel(excel_name, sheet_name='Precision', engine='openpyxl')['Tax ID']
@@ -576,38 +584,85 @@ class Misc():
             base = 'TN-Agg'
             metric_df[base] = pd.read_excel(excel_name, sheet_name='True Negatives', engine='openpyxl')['Aggregate']
         
-        if truth.lower() == 'yes':
-            Juice = cm.Confusion(self.cm_truth, '')
-            Tea = cm.comp.Comparator()
-            Chai = cm.comp.pp.Parser()
-            untrue_taxids = Juice.dictionary_to_set(Tea.save_tax_ID(Chai.main(os.path.join(self.input_path, self.cm_truth)))) ^ set(metric_df['Tax ID'])
-            untrue_indices = []
-            for utt in untrue_taxids:
-                untrue_indices.append(metric_df[metric_df['Tax ID']==utt].index.values[0])
-            metric_df.drop(untrue_indices, inplace=True)
+        # Filtering out taxids not in ground truth
+        Juice = cm.Confusion(self.cm_truth, '')
+        Tea = cm.comp.Comparator()
+        Chai = cm.comp.pp.Parser()
+            # create set of taxids not in the ground truth
+        untrue_taxids = Juice.dictionary_to_set(Tea.save_tax_ID(Chai.main(os.path.join(self.input_path, self.cm_truth)))) ^ set(metric_df['Tax ID'])
+        untrue_rows = []
+        for utt in untrue_taxids:
+            # find the index of the rows for untrue taxids
+            untrue_rows.append(metric_df[metric_df['Tax ID']==utt].index[0])
+            # drop the rows for untrue taxids
+        metric_df.drop(untrue_rows, inplace=True)
         
-        if difficulty.lower() == 'easy':
-            order = False
-            nan_pos = 'last'
-        elif difficulty.lower() == 'hard':
-            order = True
-            nan_pos = 'last'
-        elif difficulty.lower() == 'nan':
-            order = True
-            nan_pos = 'first'
+        if difficulty.lower() == 'most':
+            order = False # for descending
+        elif difficulty.lower() == 'least':
+            order = True # for ascending
         
-        needed_df = metric_df.sort_values(by=base, ascending=order, na_position=nan_pos).iloc[0:x, :]
+        needed_df = metric_df.sort_values(by=base, ascending=order, na_position='last').iloc[0:x, :]
         fn = 'Top_' + difficulty.capitalize() + '-' + metric.upper() + '_taxid.xlsx'
         needed_df.to_excel(os.path.join(self.output_path, fn), index=False)
         print('\nSaved as {}'.format(os.path.join(self.output_path, fn)))
-        return
+        return os.path.join(self.output_path, fn)
     
-    def create_heat_map(self, file_name):
+    def create_heat_map(self, file_name): # from Melissa Gray
         sys.setrecursionlimit(10000)
-        taxid_df = pd.read_excel(os.path.join(self.output_path, file_name), engine='openpyxl')
-        taxids = [taxid for taxid in taxid_df['Tax ID']]
+        top_df = pd.read_excel(os.path.join(self.output_path, file_name), engine='openpyxl')
+        taxids = [taxid for taxid in top_df['Tax ID']] # list of taxids (for y-axis)
+        print(taxids)
         
         df = pd.read_excel(os.path.join(self.output_path, self.output_name+'.xlsx'), sheet_name='True Positives', engine='openpyxl')
+        exclude = ['Tax ID', 'name', 'rank', 'Aggregate']
+        tool_names = [tool.replace('.profile', '') for tool in df.columns if tool not in exclude] # list of tool names (for x-axis)
+        
+        # also get names of taxids?
+        
+        # collect data
+        data_list = []
+        #taxid_names = []
+        l = len(df.columns)
+        for taxid in taxids:
+            idx = df[df["Tax ID"]==taxid].index[0]
+            data_list.append(list(df.iloc[idx, 3:l-1]))
+            #taxid_names.append(df.loc[taxid, "name"].split("|")[-1])
+        data_df = pd.DataFrame(data_list, index=taxids, columns=tool_names)
+        #print(data_df, end="\n\n")
+        
+        real_df = data_df.divide(data_df.loc[:, self.cm_truth.replace(".profile", "")], axis=0)
+        #print(data_df.iloc[:,0])
+        
+        sns.set(rc = {'figure.figsize':(15,20)})
+        
+        # Draw the full plot
+        g = sns.heatmap(data=real_df,
+                        #annot=True,
+                        #fmt=".1f",
+                        vmin=0,
+                        vmax=1,
+                        cmap="Reds",
+                        cbar=True,
+                        linewidths=.5,
+                        linecolor="#FFFFFF"
+                        )
+        
+        hm_name = os.path.join(self.output_path, re.sub('\..*', '_Heat_Map.png', file_name))
+        plt.suptitle(file_name.replace('.xlsx', ' Heat Map').replace('_', ' '), size=18, weight='semibold')
+        plt.savefig(hm_name, dpi=480, facecolor='#FFFFFF', edgecolor='#FFFFFF', papertype='a2', bbox_inches='tight')
+        print('Saved as {}'.format(hm_name))
+        return
+    
+    """
+    def create_heat_map(self, file_name): # from Koslicki
+        sys.setrecursionlimit(10000)
+        top_df = pd.read_excel(os.path.join(self.output_path, file_name), engine='openpyxl')
+        taxids = [taxid for taxid in top_df['Tax ID']]
+        
+        df = pd.read_excel(os.path.join(self.output_path, self.output_name+'.xlsx'), sheet_name='True Positives', engine='openpyxl')
+        #taxid_df = pd.DataFrame()
+        #taxid_df['Tax ID'] = df['Tax ID']
         
         exclude = ['Tax ID', 'name', 'rank', 'Aggregate']
         tool_names = [tool.replace('.profile', '') for tool in df.columns if tool not in exclude]
@@ -662,12 +717,14 @@ class Misc():
                            )
         
         g.ax_row_dendrogram.remove()
+        #g.ax_heatmap.axes.set_yticklabels(taxids)
         
         hm_name = os.path.join(self.output_path, re.sub('\..*', '_Heat_Map.png', file_name))
         plt.suptitle(file_name.replace('.xlsx', ' Heat Map').replace('_', ' '), size=36, weight='semibold')
-        plt.savefig(hm_name+'.png', dpi=480, facecolor='#FFFFFF')
+        plt.savefig(hm_name, dpi=480, facecolor='#FFFFFF')
         print('Saved as {}'.format(hm_name))
         return
+    """
     
     def koslicki(self):
         sys.setrecursionlimit(10000)
