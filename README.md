@@ -1,4 +1,4 @@
-# TEA
+# MeTEA
 ## by Melissa Gray (http://github.com/mag535) and Zhengqiao Zhao (http://github.com/z2e2) for the CAMI2 Challenge benchmarking
 *(Taxa Evaluation and Assessment) Parse, organize, calculate and save data from metagenomic profile files.*
 
