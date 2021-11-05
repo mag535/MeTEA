@@ -1,0 +1,6 @@
+Tax ID,Rank,Name,TP,FN,FP,TN
+1,rank1,bac,3,0,0,0
+2,rank1,anc,1,0,0,2
+3,rank2,bac|bac1,3,0,0,0
+4,rank2,bac|bac2,3,0,0,0
+6,rank2,anc|anc1,1,0,0,2

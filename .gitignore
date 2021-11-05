@@ -25,6 +25,9 @@ share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+*.pypirc
+old_package_files/
+testpypi_package_files/
 MANIFEST
 
 # PyInstaller

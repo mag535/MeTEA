@@ -10,7 +10,8 @@ Created on Thu Aug 13 15:26:55 2020
 import numpy as np
 import pandas as pd
 import re
-import TEA.comparator as comp
+import os
+import MeTEA.comparator as comp
 
 '''
  matrix -> Tax_ID: [ TP | FN | FP | TN]
@@ -58,7 +59,7 @@ class Confusion():
         Returns
         -------
         dict_set : set
-            of all the tax_IDs in d (repeats not included)
+            contains all the tax_IDs in d (repeats not included)
 
         '''
         dict_set = set()
@@ -347,10 +348,8 @@ class Confusion():
         truth = Tea.save_tax_ID(Chai.main(self.truth, t))
         predicted = Tea.save_tax_ID(Chai.main(self.file_name, t))
         
-        if '\\' in self.truth:
-            f1 = re.split('\\\\', self.truth).pop()
-        if '\\' in self.file_name:
-            f2 = re.split('\\\\', self.file_name).pop()
+        f1 = os.path.basename(self.truth).split(".profile")[0]
+        f2 = os.path.basename(self.file_name).split(".profile")[0]
         files = f1 + " " + f2
         combined = Tea.combine_tax_ID(truth, predicted)
     
